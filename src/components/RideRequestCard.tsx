@@ -44,10 +44,10 @@ const RideRequestCard = ({
   isExpanded = true,
   onToggleExpand
 }: RideRequestCardProps) => {
-  const [bidAmount, setBidAmount] = useState<number>(ride.offered_price || ride.price);
+  const [bidAmount, setBidAmount] = useState<number>(Math.round(ride.offered_price || ride.price));
 
   useEffect(() => {
-    setBidAmount(ride.offered_price || ride.price);
+    setBidAmount(Math.round(ride.offered_price || ride.price));
   }, [ride]);
 
   const incrementBid = (amount: number) => {
@@ -74,7 +74,7 @@ const RideRequestCard = ({
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => onAccept(bidAmount)}
+                onClick={() => onAccept(Math.round(bidAmount))}
                 disabled={loading}
                 size="sm"
                 className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
@@ -161,7 +161,7 @@ const RideRequestCard = ({
           <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-3 border-2 border-primary/30 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold">سعر العرض (دج)</span>
-              <span className="text-xs text-muted-foreground">عرض الراكب: {ride.offered_price || ride.price} دج</span>
+              <span className="text-xs text-muted-foreground">عرض الراكب: {Math.round(ride.offered_price || ride.price)} دج</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ const RideRequestCard = ({
 
               <Input
                 type="number"
-                value={bidAmount}
+                value={Math.round(bidAmount)}
                 onChange={(e) => setBidAmount(Number(e.target.value))}
                 className="text-center font-bold text-xl h-10 bg-background"
               />
@@ -232,11 +232,11 @@ const RideRequestCard = ({
 
           <div className="flex gap-2">
             <Button
-              onClick={() => onAccept(bidAmount)}
+              onClick={() => onAccept(Math.round(bidAmount))}
               disabled={loading}
               className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold text-lg h-12"
             >
-              إرسال العرض ({bidAmount} دج)
+              إرسال العرض ({Math.round(bidAmount)} دج)
             </Button>
             <Button
               onClick={onReject}

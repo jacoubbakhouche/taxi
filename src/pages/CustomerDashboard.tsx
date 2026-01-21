@@ -360,7 +360,7 @@ const CustomerDashboard = () => {
 
       toast({
         title: "تم حساب المسار ✅",
-        description: `المسافة: ${distanceKm.toFixed(2)} كم | المدة: ${durationMin.toFixed(1)} دقيقة | السعر: ${calculatedPrice.toFixed(0)} دج`,
+        description: `المسافة: ${distanceKm.toFixed(2)} كم | المدة: ${durationMin.toFixed(1)} دقيقة | السعر: ${Math.round(calculatedPrice)} دج`,
       });
     } catch (error) {
       console.error('Error calculating route:', error);
@@ -671,7 +671,7 @@ const CustomerDashboard = () => {
           {isPanelMinimized && (rideStatus === 'pending' || (destination && route.length > 0 && rideStatus === 'idle')) && (
             <div className="flex items-center justify-between px-2" dir="rtl">
               <span className="font-bold text-lg">
-                {rideStatus === 'pending' ? (offers.length > 0 ? `${offers.length} عروض` : 'جاري البحث...') : `${price.toFixed(0)} دج`}
+                {rideStatus === 'pending' ? (offers.length > 0 ? `${offers.length} عروض` : 'جاري البحث...') : `${Math.round(price)} دج`}
               </span>
               <span className="text-sm text-muted-foreground mr-2">
                 {rideStatus === 'pending' ? 'يرجى الانتظار' : 'السعر التقديري'}
@@ -697,7 +697,7 @@ const CustomerDashboard = () => {
                 <h4 className="font-semibold text-base">السعر</h4>
                 <div className="flex items-center justify-between bg-primary/5 rounded-lg p-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-foreground">{price.toFixed(0)} دج</span>
+                    <span className="text-2xl font-bold text-foreground">{Math.round(price)} دج</span>
                   </div>
                   <span className="text-sm text-muted-foreground">💵 نقداً</span>
                 </div>
@@ -774,7 +774,7 @@ const CustomerDashboard = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <p className="font-bold text-lg text-primary">{offer.amount} دج</p>
+                          <p className="font-bold text-lg text-primary">{Math.round(offer.amount)} دج</p>
                           <Button
                             size="sm"
                             onClick={() => handleAcceptOffer(offer)}
@@ -808,7 +808,7 @@ const CustomerDashboard = () => {
               <div className="space-y-2" dir="rtl">
                 <h4 className="font-semibold text-base">السعر</h4>
                 <div className="flex items-center justify-between bg-primary/5 rounded-lg p-3">
-                  <span className="text-xl font-bold text-foreground">{price.toFixed(0)} دج</span>
+                  <span className="text-xl font-bold text-foreground">{Math.round(price)} دج</span>
                   <span className="text-sm text-muted-foreground">💵 نقداً</span>
                 </div>
               </div>
