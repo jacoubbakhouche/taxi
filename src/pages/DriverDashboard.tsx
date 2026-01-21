@@ -597,6 +597,20 @@ const DriverDashboard = () => {
       icon: "🚗"
     });
 
+    // Pending Ride Markers
+    if (pendingRide) {
+      markers.push({
+        position: [pendingRide.pickup_lat, pendingRide.pickup_lng],
+        popup: "موقع العميل (Pickup) 📍",
+        icon: "🧍"
+      });
+      markers.push({
+        position: [pendingRide.destination_lat, pendingRide.destination_lng],
+        popup: "الوجهة (Dropoff) 🎯",
+        icon: "pin"
+      });
+    }
+
     if (customerLocation && currentRide?.status === 'accepted') {
       markers.push({
         position: customerLocation,
@@ -627,7 +641,12 @@ const DriverDashboard = () => {
 
   const getRoute = (): [number, number][] | undefined => {
     if (pendingRide) {
-      return [driverLocation, [pendingRide.pickup_lat, pendingRide.pickup_lng] as [number, number]];
+      // Driver -> Pickup -> Destination
+      return [
+        driverLocation,
+        [pendingRide.pickup_lat, pendingRide.pickup_lng] as [number, number],
+        [pendingRide.destination_lat, pendingRide.destination_lng] as [number, number]
+      ];
     }
 
     if (!currentRide) return undefined;
