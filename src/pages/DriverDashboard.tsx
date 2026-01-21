@@ -68,6 +68,7 @@ const DriverDashboard = () => {
             setCustomerInfo(customerData);
             if (activeRide.status === 'accepted') {
               setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]);
+              setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
             } else if (activeRide.status === 'in_progress') {
               setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]); // Keep pickup as origin
               setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
@@ -427,6 +428,7 @@ const DriverDashboard = () => {
               if (customerData) {
                 setCustomerInfo(customerData);
                 setCustomerLocation([updatedRide.pickup_lat, updatedRide.pickup_lng]);
+                setDestinationLocation([updatedRide.destination_lat, updatedRide.destination_lng]);
               }
             }
 
@@ -477,6 +479,7 @@ const DriverDashboard = () => {
         if (customerData) {
           setCustomerInfo(customerData);
           setCustomerLocation([pendingRide.pickup_lat, pendingRide.pickup_lng]);
+          setDestinationLocation([pendingRide.destination_lat, pendingRide.destination_lng]);
         }
       }
 
@@ -617,6 +620,14 @@ const DriverDashboard = () => {
         popup: "موقع العميل 📍",
         icon: "🧍"
       });
+      // Show destination marker in accepted state too
+      if (destinationLocation) {
+        markers.push({
+          position: destinationLocation,
+          popup: "الوجهة (Dropoff) 🎯",
+          icon: "pin"
+        });
+      }
     }
 
     if (currentRide?.status === 'in_progress') {
@@ -652,6 +663,10 @@ const DriverDashboard = () => {
     if (!currentRide) return undefined;
 
     if (currentRide.status === 'accepted' && customerLocation) {
+      // Driver -> Pickup -> Destination
+      if (destinationLocation) {
+        return [driverLocation, customerLocation, destinationLocation];
+      }
       return [driverLocation, customerLocation];
     }
 
