@@ -444,6 +444,58 @@ const DriverDashboard = () => {
     };
   }, [userId]);
 
+  const handleInstantAccept = async () => {
+    if (!pendingRide || !userId) return;
+
+    try {
+      setLoading(true);
+
+      // Direct update to accept the ride
+      const { error } = await supabase
+        .from('rides')
+        .update({
+          status: 'accepted',
+          driver_id: userId,
+          offered_price: pendingRide.price // Set the agreed price
+        })
+        .eq('id', pendingRide.id);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setCurrentRide({ ...pendingRide, status: 'accepted', driver_id: userId, offered_price: pendingRide.price });
+      setPendingRide(null);
+
+      // Fetch customer info
+      if (pendingRide.customer_id) {
+        const { data: customerData } = await supabase
+          .from('users')
+          .select('id, full_name, phone, rating, total_rides, profile_image')
+          .eq('id', pendingRide.customer_id)
+          .single();
+
+        if (customerData) {
+          setCustomerInfo(customerData);
+          setCustomerLocation([pendingRide.pickup_lat, pendingRide.pickup_lng]);
+        }
+      }
+
+      toast({
+        title: "تم قبول الرحلة! ✅",
+        description: "توجه إلى موقع العميل",
+      });
+    } catch (error: any) {
+      console.error('Error accepting ride:', error);
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء قبول الرحلة",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAcceptRide = async (bidAmount: number) => {
     if (!pendingRide || !userId) return;
 
@@ -690,6 +742,7 @@ const DriverDashboard = () => {
               }}
               customer={customerInfo}
               onAccept={handleAcceptRide}
+              onInstantAccept={handleInstantAccept}
               onReject={handleRejectRide}
               onCustomerClick={handleCustomerClick}
               loading={loading}

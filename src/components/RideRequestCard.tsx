@@ -27,6 +27,7 @@ interface RideRequestCardProps {
     profile_image?: string;
   };
   onAccept: (price: number) => void;
+  onInstantAccept?: () => void;
   onReject: () => void;
   onCustomerClick?: () => void;
   loading?: boolean;
@@ -38,6 +39,7 @@ const RideRequestCard = ({
   ride,
   customer,
   onAccept,
+  onInstantAccept,
   onReject,
   onCustomerClick,
   loading,
@@ -73,6 +75,16 @@ const RideRequestCard = ({
               </p>
             </div>
             <div className="flex gap-2">
+              {onInstantAccept && bidAmount === Math.round(ride.price) && (
+                <Button
+                  onClick={onInstantAccept}
+                  disabled={loading}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                >
+                  قبول ({Math.round(ride.price)})
+                </Button>
+              )}
               <Button
                 onClick={() => onAccept(Math.round(bidAmount))}
                 disabled={loading}
@@ -230,22 +242,33 @@ const RideRequestCard = ({
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={() => onAccept(Math.round(bidAmount))}
-              disabled={loading}
-              className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold text-lg h-12"
-            >
-              إرسال العرض ({Math.round(bidAmount)} دج)
-            </Button>
-            <Button
-              onClick={onReject}
-              disabled={loading}
-              variant="outline"
-              className="w-16 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
-              ❌
-            </Button>
+          <div className="flex flex-col gap-2">
+            {onInstantAccept && (
+              <Button
+                onClick={onInstantAccept}
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all transform hover:scale-[1.02] border border-green-400/30"
+              >
+                ⚡ قبول فوري ({Math.round(ride.price || 0)} دج)
+              </Button>
+            )}
+            <div className="flex gap-2 w-full">
+              <Button
+                onClick={() => onAccept(Math.round(bidAmount))}
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold text-lg h-12"
+              >
+                إرسال عرض ({Math.round(bidAmount)} دج)
+              </Button>
+              <Button
+                onClick={onReject}
+                disabled={loading}
+                variant="outline"
+                className="w-16 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-12"
+              >
+                ❌
+              </Button>
+            </div>
           </div>
         </div>
       )}
