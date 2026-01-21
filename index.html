@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Taxi DZ - تطبيق تاكسي الجزائر</title>
+    <meta name="description" content="تطبيق تاكسي ذكي يجمع بين الركاب والسائقين في الجزائر - احجز رحلتك بسهولة" />
+    <meta name="author" content="Taxi DZ" />
+
+    <meta property="og:title" content="Taxi DZ - تطبيق تاكسي الجزائر" />
+    <meta property="og:description" content="تطبيق تاكسي ذكي يجمع بين الركاب والسائقين في الجزائر" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error('Global Error:', message, 'at', source, ':', lineno);
+        document.body.innerHTML += '<div style="color:red; font-size: 20px; padding: 20px;">' + message + '</div>';
+      };
+      console.log('Index.html loaded');
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+ 
+@layer base {
+  :root {
+    /* Core Colors - Dark Mode Default */
+    --background: 0 0% 7%;      /* #111111 */
+    --foreground: 0 0% 100%;    /* #FFFFFF */
+ 
+    --card: 0 0% 10%;           /* #1A1A1A */
+    --card-foreground: 0 0% 100%;
+ 
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+ 
+    --primary: 48 90% 62%;      /* #F5D848 (Taxi Yellow) */
+    --primary-foreground: 0 0% 0%; /* Black text on yellow */
+ 
+    --secondary: 0 0% 15%;      /* Dark Grey for secondary elements */
+    --secondary-foreground: 0 0% 100%;
+ 
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+ 
+    --accent: 48 90% 62%;
+    --accent-foreground: 0 0% 0%;
+ 
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+ 
+    --border: 0 0% 20%;         /* #333333 */
+    --input: 0 0% 15%;
+    --ring: 48 90% 62%;
+ 
+    --radius: 0.75rem;
+
+    /* Custom Gradients & Effects */
+    --gradient-taxi: linear-gradient(135deg, #F5D848, #FBBF24);
+    --gradient-dark: linear-gradient(180deg, #1A1A1A, #111111);
+    --glow-taxi: 0 0 30px rgba(245, 216, 72, 0.3);
+  }
+ 
+  /* Force Dark Mode styles even without .dark class if preferred, 
+     but keeping .dark block for compatibility with theme switchers if needed later */
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 48 90% 62%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 48 90% 62%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 48 90% 62%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-bounce-slow {
+    animation: bounce 3s infinite;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+  }
+}
