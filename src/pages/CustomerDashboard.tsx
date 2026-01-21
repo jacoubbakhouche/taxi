@@ -91,7 +91,10 @@ const CustomerDashboard = () => {
     if (!currentRideId) return;
 
     const handleRideUpdate = async (ride: any) => {
-      if (ride.status === 'accepted' && ride.driver_id) {
+      console.log('Processing Ride Update:', ride);
+
+      if (ride.status === 'accepted') {
+        // Updated logic: Trust status 'accepted' even if driver_id check needs verification
         if (rideStatus !== 'accepted') {
           setRideStatus('accepted');
           toast({
@@ -100,16 +103,33 @@ const CustomerDashboard = () => {
           });
         }
 
-        if (!driverInfo) {
-          const { data: driver } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', ride.driver_id)
-            .single();
+        const dId = ride.driver_id;
+        if (dId) {
+          if (!driverInfo || driverInfo.id !== dId) {
+            const { data: driver } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', dId)
+              .single();
 
-          if (driver) {
-            setDriverInfo(driver);
-            setDriverLocation([driver.current_lat, driver.current_lng]);
+            if (driver) {
+              setDriverInfo(driver);
+              setDriverLocation([driver.current_lat, driver.current_lng]);
+            }
+          }
+        } else {
+          console.warn('Accepted ride missing driver_id, refetching...');
+          const { data: refetchedRide } = await supabase.from('rides').select('*').eq('id', ride.id).single();
+          if (refetchedRide && refetchedRide.driver_id) {
+            const { data: driver } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', refetchedRide.driver_id)
+              .single();
+            if (driver) {
+              setDriverInfo(driver);
+              setDriverLocation([driver.current_lat, driver.current_lng]);
+            }
           }
         }
       } else if (ride.status === 'in_progress') {
