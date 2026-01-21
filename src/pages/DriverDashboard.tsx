@@ -1017,8 +1017,9 @@ const DriverDashboard = () => {
                 )}
 
                 {currentRide.status === 'in_progress' && (
-                  <div className="w-full h-16 mt-6 bg-black/50 text-white flex items-center justify-center rounded-2xl border border-white/10 animate-pulse">
-                    <span className="text-lg font-medium">Waiting for customer to end ride...</span>
+                  <div className="w-full h-16 mt-6 bg-[#1A1A1A] text-white flex items-center justify-between px-6 rounded-2xl border border-white/10 shadow-lg animate-in fade-in zoom-in duration-300">
+                    <span className="text-gray-400 font-medium text-sm">Total Price (السعر)</span>
+                    <span className="text-2xl font-bold text-[#F5D848] tabular-nums">{currentRide.price || 0} <span className="text-sm text-white">DZD</span></span>
                   </div>
                 )}
               </div>
