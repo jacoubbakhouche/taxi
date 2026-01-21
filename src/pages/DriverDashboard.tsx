@@ -142,7 +142,7 @@ const DriverDashboard = () => {
     };
   }, [isOnline, userId, driverLocation]);
 
-  // 2. NEW: Listen for updates to the CURRENT pending ride (e.g. if taken by another driver)
+  // 2. NEW: Listen for updates/delete to the CURRENT pending ride
   useEffect(() => {
     if (!pendingRide) return;
 
@@ -151,15 +151,16 @@ const DriverDashboard = () => {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'rides',
           filter: `id=eq.${pendingRide.id}`,
         },
         (payload) => {
-          const updatedRide = payload.new;
-          if (updatedRide.status !== 'pending') {
-            console.log("Ride taken or cancelled:", updatedRide);
+          console.log("Pending ride updated/deleted:", payload);
+
+          if (payload.eventType === 'DELETE' || (payload.new && payload.new.status !== 'pending')) {
+            console.log("Ride taken, cancelled, or deleted:", payload);
             setPendingRide(null);
             setCustomerInfo(null);
             setIsSheetExpanded(false);
@@ -177,6 +178,28 @@ const DriverDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [pendingRide]);
+
+  // 3. Fallback: Polling for pending ride status (in case Realtime fails or RLS hides the update)
+  useEffect(() => {
+    if (!pendingRide) return;
+
+    const interval = setInterval(async () => {
+      const { data: ride, error } = await supabase
+        .from('rides')
+        .select('status')
+        .eq('id', pendingRide.id)
+        .single();
+
+      if (error || !ride || ride.status !== 'pending') {
+        console.log("Polling found pending ride invalid:", ride);
+        setPendingRide(null);
+        setCustomerInfo(null);
+        setIsSheetExpanded(false);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [pendingRide]);
 
   useEffect(() => {
@@ -242,6 +265,63 @@ const DriverDashboard = () => {
       }
     };
   }, [isOnline, userId, currentRide, customerLocation]);
+
+  // 3. NEW: Check for EXISTING pending rides on mount/resume
+  useEffect(() => {
+    if (!isOnline || !userId || !driverLocation || pendingRide || currentRide) return;
+
+    const fetchPendingRides = async () => {
+      console.log("Checking for existing pending rides...");
+      const { data: rides, error } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error fetching pending rides:', error);
+        return;
+      }
+
+      if (rides && rides.length > 0) {
+        // Find the closest ride
+        let closestRide = null;
+        let minDistance = Infinity;
+
+        for (const ride of rides) {
+          const distance = calculateDistance(
+            driverLocation[0],
+            driverLocation[1],
+            ride.pickup_lat,
+            ride.pickup_lng
+          );
+
+          if (distance <= 5 && distance < minDistance) {
+            minDistance = distance;
+            closestRide = ride;
+          }
+        }
+
+        if (closestRide) {
+          console.log("Found existing pending ride:", closestRide);
+          setPendingRide(closestRide);
+
+          // Fetch customer info
+          const { data: customerData } = await supabase
+            .from('users')
+            .select('id, full_name, phone, rating, total_rides, profile_image')
+            .eq('id', closestRide.customer_id)
+            .single();
+
+          if (customerData) {
+            setCustomerInfo(customerData);
+          }
+          setIsSheetExpanded(true);
+        }
+      }
+    };
+
+    fetchPendingRides();
+  }, [isOnline, userId, driverLocation, pendingRide, currentRide]);
 
   const checkAuth = async () => {
     try {
@@ -499,38 +579,45 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleAcceptRide = async (bidAmount: number) => {
+  const handleAcceptRide = async (price: number) => {
     if (!pendingRide || !userId) return;
 
     try {
       setLoading(true);
 
-      // Create an offer in the new table
+      // Direct updates to rides table (Simplification)
       const { error } = await supabase
-        .from('ride_offers')
-        .insert({
-          ride_id: pendingRide.id,
+        .from('rides')
+        .update({
+          status: 'accepted',
           driver_id: userId,
-          amount: bidAmount, // Use the proposed bid amount
-          accepted: false
-        });
+          final_price: price
+        })
+        .eq('id', pendingRide.id);
 
       if (error) throw error;
 
-      // Optimistic update: Remove from pending list locally
+      // Update local state
+      setCurrentRide({
+        ...pendingRide,
+        status: 'accepted',
+        driver_id: userId,
+        final_price: price
+      });
+
       setPendingRide(null);
       setCustomerInfo(null);
       setIsSheetExpanded(false);
 
       toast({
-        title: "تم إرسال العرض! 📤",
-        description: `عرضك بقيمة ${bidAmount} دج بانتظار موافقة العميل...`,
+        title: "تم قبول الرحلة! ✅",
+        description: "توجه إلى موقع العميل",
       });
     } catch (error: any) {
-      console.error('Error sending offer:', error);
+      console.error('Error accepting ride:', error);
       toast({
         title: "خطأ",
-        description: error.message || "لم نتمكن من إرسال العرض",
+        description: error.message || "حدث خطأ أثناء قبول الرحلة",
         variant: "destructive",
       });
     } finally {
@@ -538,13 +625,34 @@ const DriverDashboard = () => {
     }
   };
 
-  const handleRejectRide = () => {
-    setPendingRide(null);
-    setCustomerInfo(null);
-    toast({
-      title: "تم رفض الطلب",
-      description: "سيتم البحث عن طلبات أخرى",
-    });
+  const handleRejectRide = async () => {
+    if (!pendingRide) return;
+
+    try {
+      const { error } = await supabase
+        .from('rides')
+        .delete()
+        .eq('id', pendingRide.id);
+
+      if (error) {
+        console.error("Error rejecting ride:", error);
+        toast({
+          title: "خطأ",
+          description: "لم يتم رفض الطلب (تأكد من صلاحيات الحذف)",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setPendingRide(null);
+      setCustomerInfo(null);
+      toast({
+        title: "تم رفض الطلب",
+        description: "تم حذف الطلب بنجاح",
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleCustomerClick = () => {

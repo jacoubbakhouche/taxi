@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -114,14 +114,56 @@ function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
   );
 }
 
+// Helper function to fetch route from OSRM
+async function getRoadRoute(start: [number, number], end: [number, number]) {
+  const startStr = `${start[1]},${start[0]}`;
+  const endStr = `${end[1]},${end[0]}`;
+
+  try {
+    const response = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${startStr};${endStr}?overview=full&geometries=geojson`
+    );
+
+    const data = await response.json();
+
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      console.error("No route found");
+      return null;
+    }
+
+    // OSRM returns [lng, lat], we need to flip back to [lat, lng] for Leaflet
+    return data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]) as [number, number][];
+  } catch (error) {
+    console.error("Error fetching route:", error);
+    return null;
+  }
+}
+
 const Map = ({ center, zoom = 13, markers = [], onMapClick, route }: MapProps) => {
+  const [enhancedRoute, setEnhancedRoute] = useState<[number, number][] | null>(null);
+
+  const start = route && route.length === 2 ? route[0] : null;
+  const end = route && route.length === 2 ? route[1] : null;
+
+  useEffect(() => {
+    if (start && end) {
+      getRoadRoute(start, end).then((path) => {
+        if (path) setEnhancedRoute(path);
+      });
+    } else {
+      setEnhancedRoute(null);
+    }
+  }, [start?.[0], start?.[1], end?.[0], end?.[1]]);
+
+  const displayRoute = enhancedRoute || route;
+
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg" style={{ perspective: "1000px" }}>
-      <div style={{ transform: "rotateX(20deg) scale(1.1)", height: "100%", width: "100%" }}>
+    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg">
+      <div style={{ height: "100%", width: "100%" }}>
         <MapContainer
           center={center}
           zoom={zoom}
-          style={{ height: "100%", width: "100%" }}
+          style={{ height: "100%", width: "100%", background: '#242424' }}
           scrollWheelZoom={true}
         >
           <TileLayer
@@ -131,12 +173,12 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route }: MapProps) =
           <MapUpdater center={center} />
           {onMapClick && <MapClickHandler onClick={onMapClick} />}
           <MapMarkers markers={markers} />
-          {route && route.length > 0 && (
+          {displayRoute && displayRoute.length > 0 && (
             <Polyline
-              positions={route}
-              color="#22c55e"
-              weight={5}
-              opacity={0.8}
+              positions={displayRoute}
+              color="#3b82f6"
+              weight={6}
+              opacity={0.9}
             />
           )}
         </MapContainer>

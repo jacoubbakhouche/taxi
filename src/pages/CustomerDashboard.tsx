@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -176,11 +176,18 @@ const CustomerDashboard = () => {
     // Polling fallback (every 3 seconds)
     const intervalId = setInterval(async () => {
       if (rideStatus === 'pending' || rideStatus === 'accepted') {
+        console.log('Polling ride:', currentRideId);
         const { data: ride, error } = await supabase
           .from('rides')
           .select('*')
           .eq('id', currentRideId)
           .single();
+
+        console.log('Polling result:', { ride, error });
+
+        if (error) {
+          console.error('Polling error:', error);
+        }
 
         if (ride && !error) {
           if (ride.status !== rideStatus || (ride.status === 'accepted' && !driverInfo)) {
@@ -197,71 +204,29 @@ const CustomerDashboard = () => {
     };
   }, [currentRideId, rideStatus, driverInfo]);
 
-  const [offers, setOffers] = useState<any[]>([]);
+  // Use refs to track state for cleanup
+  const rideIdRef = useRef<string | null>(null);
+  const statusRef = useRef<string>('idle');
 
-  // Listen for offers
   useEffect(() => {
-    if (!currentRideId || rideStatus !== 'pending') return;
+    rideIdRef.current = currentRideId;
+    statusRef.current = rideStatus;
+  }, [currentRideId, rideStatus]);
 
-    // Load existing offers
-    const fetchOffers = async () => {
-      const { data: existingOffers } = await supabase
-        .from('ride_offers')
-        .select(`
-          *,
-          driver:driver_id (
-            id,
-            full_name,
-            rating,
-            total_rides,
-            profile_image,
-            car_type,
-            car_color,
-            car_plate
-          )
-        `)
-        .eq('ride_id', currentRideId);
+  // Cleanup on unmount: Cancel pending ride if user leaves dashboard
+  useEffect(() => {
+    return () => {
+      const rId = rideIdRef.current;
+      const st = statusRef.current;
 
-      if (existingOffers) {
-        setOffers(existingOffers);
+      if (rId && st === 'pending') {
+        console.log("Auto-cancelling pending ride on exit...");
+        supabase.from('rides').update({ status: 'cancelled' }).eq('id', rId).then(() => {
+          console.log("Ride cancelled successfully");
+        });
       }
     };
-
-    fetchOffers();
-
-    const channel = supabase
-      .channel('ride-offers')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ride_offers',
-          filter: `ride_id=eq.${currentRideId}`,
-        },
-        async (payload) => {
-          const newOffer = payload.new;
-
-          // Fetch driver details for the new offer
-          const { data: driverData } = await supabase
-            .from('users')
-            .select('id, full_name, rating, total_rides, profile_image, car_type, car_color, car_plate')
-            .eq('id', newOffer.driver_id)
-            .single();
-
-          if (driverData) {
-            setOffers(prev => [...prev, { ...newOffer, driver: driverData }]);
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi56+mjUBELUKzn77ljHAU7k9j0y3ktBSh+zPLaizsKGGS36Oynaw==');
-            audio.play().catch(e => console.log('Audio play failed:', e));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentRideId, rideStatus]);
+  }, []);
 
   // تتبع موقع السائق في الوقت الفعلي
   useEffect(() => {
@@ -571,47 +536,8 @@ const CustomerDashboard = () => {
     return undefined;
   };
 
-  const handleAcceptOffer = async (offer: any) => {
-    try {
-      setLoading(true);
 
-      // 1. Update Ride Status
-      const { error: rideError } = await supabase
-        .from('rides')
-        .update({
-          status: 'accepted',
-          driver_id: offer.driver_id,
-          final_price: offer.amount,
-        })
-        .eq('id', currentRideId);
 
-      if (rideError) throw rideError;
-
-      // 2. Mark Offer as Accepted
-      await supabase
-        .from('ride_offers')
-        .update({ accepted: true })
-        .eq('id', offer.id);
-
-      setRideStatus('accepted');
-      setDriverInfo(offer.driver);
-
-      toast({
-        title: "تم قبول العرض! ✅",
-        description: "السائق في الطريق إليك",
-      });
-
-    } catch (error) {
-      console.error('Error accepting offer:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء قبول العرض",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -691,7 +617,7 @@ const CustomerDashboard = () => {
           {isPanelMinimized && (rideStatus === 'pending' || (destination && route.length > 0 && rideStatus === 'idle')) && (
             <div className="flex items-center justify-between px-2" dir="rtl">
               <span className="font-bold text-lg">
-                {rideStatus === 'pending' ? (offers.length > 0 ? `${offers.length} عروض` : 'جاري البحث...') : `${Math.round(price)} دج`}
+                {rideStatus === 'pending' ? 'جاري البحث...' : `${Math.round(price)} دج`}
               </span>
               <span className="text-sm text-muted-foreground mr-2">
                 {rideStatus === 'pending' ? 'يرجى الانتظار' : 'السعر التقديري'}
@@ -769,54 +695,15 @@ const CustomerDashboard = () => {
 
           {rideStatus === 'pending' && !isPanelMinimized && (
             <div className="space-y-3 bg-background rounded-lg p-4 border border-border">
-              {offers.length > 0 ? (
-                <div className="space-y-3" dir="rtl">
-                  <h3 className="font-bold text-lg mb-2">عروض السائقين ({offers.length})</h3>
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {offers.map((offer) => (
-                      <div key={offer.id} className="bg-muted/30 p-3 rounded-lg border border-border flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20 bg-background">
-                            {offer.driver.profile_image ? (
-                              <img src={offer.driver.profile_image} alt={offer.driver.full_name} className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="w-full h-full p-2 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">{offer.driver.full_name}</p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <span>⭐ {offer.driver.rating?.toFixed(1) || '5.0'}</span>
-                              <span>•</span>
-                              <span>{offer.driver.car_type || 'سيارة'}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{offer.driver.car_plate}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <p className="font-bold text-lg text-primary">{Math.round(offer.amount)} دج</p>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcceptOffer(offer)}
-                            disabled={loading}
-                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-4"
-                          >
-                            قبول
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
+                <div className="animate-pulse bg-primary/20 p-4 rounded-full">
+                  <Search className="w-8 h-8 text-primary animate-bounce" />
                 </div>
-              ) : (
-                <div className="text-center py-4" dir="rtl">
-                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <h3 className="font-bold text-lg mb-1">جاري البحث عن سائق...</h3>
-                  <p className="text-sm text-muted-foreground">
-                    يرجى الانتظار بينما نتواصل مع أقرب سائق
-                  </p>
+                <div>
+                  <h3 className="font-bold text-lg">جاري البحث عن سائق...</h3>
+                  <p className="text-muted-foreground text-sm">يرجى الانتظار، سيتم قبول طلبك قريباً</p>
                 </div>
-              )}
+              </div>
 
               <div className="space-y-2" dir="rtl">
                 <h4 className="font-semibold text-base">مسار الرحلة</h4>

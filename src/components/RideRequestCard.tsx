@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MapPin, Navigation, ChevronUp, ChevronDown, Plus, Minus } from "lucide-react";
+import { MapPin, Navigation, ChevronUp, ChevronDown } from "lucide-react";
 import CustomerInfoCard from "./CustomerInfoCard";
 
 interface RideRequestCardProps {
@@ -46,19 +45,6 @@ const RideRequestCard = ({
   isExpanded = true,
   onToggleExpand
 }: RideRequestCardProps) => {
-  const [bidAmount, setBidAmount] = useState<number>(Math.round(ride.offered_price || ride.price));
-
-  useEffect(() => {
-    setBidAmount(Math.round(ride.offered_price || ride.price));
-  }, [ride]);
-
-  const incrementBid = (amount: number) => {
-    setBidAmount(prev => Math.floor(prev + amount));
-  };
-
-  const decrementBid = (amount: number) => {
-    setBidAmount(prev => Math.max(0, Math.floor(prev - amount)));
-  };
 
   return (
     <Card className="bg-card/95 backdrop-blur-sm border-2 border-primary/20 animate-in fade-in slide-in-from-bottom-4 overflow-hidden">
@@ -71,27 +57,17 @@ const RideRequestCard = ({
                 <p className="font-bold text-sm truncate">{customer.full_name}</p>
               )}
               <p className="text-2xl font-bold text-primary">
-                💰 {bidAmount.toFixed(0)} دج
+                💰 {Math.round(ride.price)} دج
               </p>
             </div>
             <div className="flex gap-2">
-              {onInstantAccept && bidAmount === Math.round(ride.price) && (
-                <Button
-                  onClick={onInstantAccept}
-                  disabled={loading}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                >
-                  قبول ({Math.round(ride.price)})
-                </Button>
-              )}
               <Button
-                onClick={() => onAccept(Math.round(bidAmount))}
+                onClick={() => onAccept(Math.round(ride.price))}
                 disabled={loading}
                 size="sm"
-                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold"
               >
-                ✅
+                قبول ({Math.round(ride.price)})
               </Button>
               <Button
                 onClick={onReject}
@@ -169,65 +145,10 @@ const RideRequestCard = ({
             </div>
           </div>
 
-          {/* Negotiate Price UI */}
-          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-3 border-2 border-primary/30 space-y-3">
+          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-3 border-2 border-primary/30">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold">سعر العرض (دج)</span>
-              <span className="text-xs text-muted-foreground">عرض الراكب: {Math.round(ride.offered_price || ride.price)} دج</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => decrementBid(50)}
-                className="h-10 w-10 shrink-0"
-              >
-                <Minus className="w-4 h-4" />
-              </Button>
-
-              <Input
-                type="number"
-                value={Math.round(bidAmount)}
-                onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="text-center font-bold text-xl h-10 bg-background"
-              />
-
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => incrementBid(50)}
-                className="h-10 w-10 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="flex-1 text-xs"
-                onClick={() => incrementBid(50)}
-              >
-                +50
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="flex-1 text-xs"
-                onClick={() => incrementBid(100)}
-              >
-                +100
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="flex-1 text-xs"
-                onClick={() => incrementBid(200)}
-              >
-                +200
-              </Button>
+              <span className="text-sm font-bold">سعر الرحلة</span>
+              <span className="text-xl font-bold text-primary">{Math.round(ride.price)} دج</span>
             </div>
           </div>
 
@@ -242,33 +163,22 @@ const RideRequestCard = ({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            {onInstantAccept && (
-              <Button
-                onClick={onInstantAccept}
-                disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all transform hover:scale-[1.02] border border-green-400/30"
-              >
-                ⚡ قبول فوري ({Math.round(ride.price || 0)} دج)
-              </Button>
-            )}
-            <div className="flex gap-2 w-full">
-              <Button
-                onClick={() => onAccept(Math.round(bidAmount))}
-                disabled={loading}
-                className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90 font-bold text-lg h-12"
-              >
-                إرسال عرض ({Math.round(bidAmount)} دج)
-              </Button>
-              <Button
-                onClick={onReject}
-                disabled={loading}
-                variant="outline"
-                className="w-16 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-12"
-              >
-                ❌
-              </Button>
-            </div>
+          <div className="flex gap-2 w-full">
+            <Button
+              onClick={() => onAccept(Math.round(ride.price))}
+              disabled={loading}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all transform hover:scale-[1.02] border border-green-400/30"
+            >
+              ⚡ قبول الرحلة ({Math.round(ride.price)} دج)
+            </Button>
+            <Button
+              onClick={onReject}
+              disabled={loading}
+              variant="outline"
+              className="w-16 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-12"
+            >
+              ❌
+            </Button>
           </div>
         </div>
       )}
