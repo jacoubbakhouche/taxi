@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import DriverInfoCard from "@/components/DriverInfoCard";
 import RatingDialog from "@/components/RatingDialog";
-import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -23,6 +23,9 @@ const CustomerDashboard = () => {
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [currentRideId, setCurrentRideId] = useState<string | null>(null);
   const [driverInfo, setDriverInfo] = useState<any>(null);
+  const [candidateDriver, setCandidateDriver] = useState<any>(null); // For pre-approval
+  const [declinedDrivers, setDeclinedDrivers] = useState<string[]>([]); // To avoid re-showing declined drivers
+  const [isSearchingDriver, setIsSearchingDriver] = useState(false);
   const [rideStatus, setRideStatus] = useState<string>("idle");
   const [showRating, setShowRating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -396,45 +399,182 @@ const CustomerDashboard = () => {
     }
   };
 
+  const findNearestDriver = async () => {
+    setIsSearchingDriver(true);
+    setCandidateDriver(null);
+
+    try {
+      // 1. Fetch online drivers
+      const { data: drivers, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'driver')
+        .eq('is_online', true);
+
+      if (error) throw error;
+
+      if (!drivers || drivers.length === 0) {
+        toast({
+          title: "لا يوجد سائقين",
+          description: "للأسف لا يوجد سائقين متاحين حالياً",
+          variant: "destructive"
+        });
+        setIsSearchingDriver(false);
+        return;
+      }
+
+      // 2. Filter out declined drivers
+      const availableDrivers = drivers.filter(d => !declinedDrivers.includes(d.id));
+
+      if (availableDrivers.length === 0) {
+        toast({
+          title: "لا يوجد سائقين جدد",
+          description: "لقد شاهدت جميع السائقين المتاحين",
+          variant: "default"
+        });
+        setIsSearchingDriver(false);
+        return;
+      }
+
+      // 3. Sort by distance (Simple approximation using coords if available)
+      // Note: Real production apps need PostGIS. Here we filter locally.
+      // We assume userLocation is updated.
+      if (!userLocation) {
+        // Fallback: Pick random or first
+        setCandidateDriver(availableDrivers[0]);
+      } else {
+        // Calculate distances
+        const driversWithDist = availableDrivers.map(driver => {
+          // Mock location for drivers if not in DB (In real app, we need driver_locations table)
+          // For demo, we assume drivers are nearby or use stored location if available
+          // Since we don't have realtime location stream here yet, we pick random "nearby"
+          return { ...driver, distance: Math.random() * 5 };
+        }).sort((a, b) => a.distance - b.distance);
+
+        setCandidateDriver(driversWithDist[0]);
+      }
+
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء البحث عن سائق",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearchingDriver(false);
+    }
+  };
+
+  const handleEndRide = async () => {
+    if (currentRideId) {
+      const { error } = await supabase
+        .from('rides')
+        .update({ status: 'completed' })
+        .eq('id', currentRideId);
+
+      if (error) {
+        console.error("Error ending ride:", error);
+        toast({ title: "Error", description: "Failed to end ride", variant: "destructive" });
+      } else {
+        toast({ title: "Ride Completed", description: "You have arrived!" });
+        // State update will happen via Realtime subscription
+      }
+    }
+  };
+
+  const handleDeclineCandidate = () => {
+    if (candidateDriver) {
+      setDeclinedDrivers(prev => [...prev, candidateDriver.id]);
+      setCandidateDriver(null);
+      // Immediately search for next
+      findNearestDriver();
+    }
+  };
+
+  const handleCancelRide = async () => {
+    try {
+      if (currentRideId) {
+        await supabase
+          .from('rides')
+          .update({ status: 'cancelled' })
+          .eq('id', currentRideId);
+      }
+    } catch (error) {
+      console.error("Error cancelling ride:", error);
+    }
+
+    // Reset state
+    localStorage.removeItem('currentRideId');
+    setCurrentRideId(null);
+    setRideStatus('idle');
+    setDestination(null);
+    setRoute([]);
+    setSearchQuery("");
+    setPrice(0);
+    setDistance(0);
+    setDuration(0);
+    setCandidateDriver(null);
+    setIsSearchingDriver(false);
+  };
+
   const handleRequestRide = async () => {
-    if (!destination || !userId) return;
+    if (!candidateDriver) {
+      // Start flow: Find driver first
+      findNearestDriver();
+      return;
+    }
+
+    // If candidate exists, PROCEED to create request
+    if (!userId || !destination) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء تحديد الوجهة أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
 
-      const { data: ride, error } = await supabase
+      const { data, error } = await supabase
         .from('rides')
         .insert({
           customer_id: userId,
-          pickup_lat: userLocation[0],
-          pickup_lng: userLocation[1],
+          pickup_lat: userLocation?.[0],
+          pickup_lng: userLocation?.[1],
           destination_lat: destination[0],
           destination_lng: destination[1],
-          pickup_address: 'موقعك الحالي',
+          pickup_address: "موقعي الحالي", // Should be reverse geocoded
           destination_address: searchQuery,
-          distance: distance,
-          duration: Math.round(duration),
           price: price,
+          distance: distance,
+          duration: duration,
           status: 'pending',
+          driver_id: candidateDriver.id // ASSIGN SPECIFIC DRIVER
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setCurrentRideId(ride.id);
+      setCurrentRideId(data.id);
       setRideStatus('pending');
-      localStorage.setItem('currentRideId', ride.id);
+      localStorage.setItem('currentRideId', data.id);
+
+      // Clear candidate state as we moved to pending
+      setCandidateDriver(null);
 
       toast({
-        title: "تم إرسال الطلب! 📲",
-        description: "جاري البحث عن سائق قريب منك...",
+        title: "تم إرسال الطلب! 🚖",
+        description: `جاري انتظار قبول السائق ${candidateDriver.full_name}...`,
       });
-    } catch (error) {
-      console.error('Error creating ride:', error);
+    } catch (error: any) {
+      console.error('Error requesting ride:', error);
       toast({
         title: "خطأ",
-        description: "لم نتمكن من إرسال الطلب",
+        description: error.message || "حدث خطأ أثناء طلب السيارة",
         variant: "destructive",
       });
     } finally {
@@ -625,9 +765,9 @@ const CustomerDashboard = () => {
             </div>
           )}
 
-          {driverInfo && rideStatus === 'accepted' && (
+          {/* DriverInfoCard removed from here to be rendered outside */ /*{driverInfo && rideStatus === 'accepted' && (
             <DriverInfoCard driver={driverInfo} />
-          )}
+          )} */}
 
           {destination && route.length > 0 && rideStatus === 'idle' && !isPanelMinimized && (
             <div className="space-y-3 bg-background rounded-lg p-4 border border-border">
@@ -695,16 +835,23 @@ const CustomerDashboard = () => {
 
           {rideStatus === 'pending' && !isPanelMinimized && (
             <div className="space-y-3 bg-background rounded-lg p-4 border border-border">
-              <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
-                <div className="animate-pulse bg-primary/20 p-4 rounded-full">
-                  <Search className="w-8 h-8 text-primary animate-bounce" />
+              <div className="flex flex-col items-center gap-4 py-8 animate-in fade-in zoom-in duration-300">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#F5D848] blur-xl opacity-20 animate-pulse"></div>
+                  <Loader2 className="w-12 h-12 animate-spin text-[#F5D848] relative z-10" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">جاري البحث عن سائق...</h3>
-                  <p className="text-muted-foreground text-sm">يرجى الانتظار، سيتم قبول طلبك قريباً</p>
+                <div className="text-center space-y-1">
+                  <h3 className="text-xl font-bold text-white">في انتظار قبول السائق...</h3>
+                  <p className="text-gray-400 text-sm">Waiting for driver acceptance...</p>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelRide}
+                  className="mt-2 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 w-full max-w-xs"
+                >
+                  Cancel Request (إلغاء)
+                </Button>
               </div>
-
               <div className="space-y-2" dir="rtl">
                 <h4 className="font-semibold text-base">مسار الرحلة</h4>
                 <div className="space-y-1 text-sm text-muted-foreground">
@@ -765,7 +912,93 @@ const CustomerDashboard = () => {
               جاري حساب المسار...
             </div>
           )}
+
+          {/* Candidate Driver Popup (Pre-Approval) */}
+          {candidateDriver && (
+            <div className="absolute bottom-4 left-4 right-4 z-[2000] animate-in slide-in-from-bottom-5">
+              <div className="bg-[#1A1A1A] text-white rounded-2xl p-4 shadow-2xl border border-white/10">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">اقتراح سائق (Choose a driver)</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-3xl font-bold">{Math.round(price)} دج</span>
+                      <span className="text-sm text-gray-400">{duration.toFixed(0)} min</span>
+                    </div>
+                    <div className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full w-fit mt-1 flex items-center gap-1">
+                      <span>👍</span> السعر العادل
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCandidateDriver(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    X
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3 mb-6 bg-white/5 p-3 rounded-xl">
+                  <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden">
+                    <img
+                      src={candidateDriver.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${candidateDriver.full_name}`}
+                      alt="Driver"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg">{candidateDriver.full_name}</span>
+                      <span className="flex items-center text-yellow-500 text-sm">
+                        ★ {candidateDriver.rating || "5.0"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      {candidateDriver.total_rides || 0} رحلة • {candidateDriver.car_model || "سيارة أجرة"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="bg-gray-700 hover:bg-gray-600 border-0 text-white h-12 rounded-xl font-bold"
+                    onClick={handleDeclineCandidate}
+                  >
+                    Decline (رفض)
+                  </Button>
+                  <Button
+                    className="bg-[#84cc16] hover:bg-[#65a30d] text-black h-12 rounded-xl font-bold text-lg"
+                    onClick={handleRequestRide}
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="animate-spin" /> : "Accept (قبول)"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSearchingDriver && (
+            <div className="absolute inset-0 z-[2001] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="bg-white p-6 rounded-full animate-bounce mb-4">
+                <Search className="w-8 h-8 text-black" />
+              </div>
+              <h3 className="text-white font-bold text-xl">جاري البحث عن أقرب سائق...</h3>
+            </div>
+          )}
         </Card>
+
+        {/* Driver Info Card (Professional UI) - Rendered outside to overlap properly */}
+        {driverInfo && (rideStatus === 'accepted' || rideStatus === 'in_progress') && (
+          <DriverInfoCard
+            driver={driverInfo}
+            rideStatus={rideStatus}
+            onCancel={handleCancelRide}
+            onEndRide={handleEndRide}
+          />
+        )}
       </div>
 
       {driverInfo && (

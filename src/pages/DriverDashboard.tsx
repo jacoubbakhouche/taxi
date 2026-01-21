@@ -99,8 +99,14 @@ const DriverDashboard = () => {
           filter: 'status=eq.pending',
         },
         async (payload) => {
-          const ride = payload.new;
+          const ride = payload.new as Ride;
           console.log('New ride request:', ride);
+
+          // NEW: If ride is assigned to a specific driver, ignore if it's not ME.
+          if (ride.driver_id && ride.driver_id !== userId) {
+            console.log('Ignoring ride assigned to another driver');
+            return;
+          }
 
           const distance = calculateDistance(
             driverLocation[0],
@@ -1000,12 +1006,21 @@ const DriverDashboard = () => {
                 </div>
 
                 {/* Primary Action Button (Arrived / Complete) */}
-                <Button
-                  onClick={handleCompleteRide}
-                  className="w-full h-16 mt-6 bg-[#F5D848] hover:bg-[#E5C838] text-black text-xl font-bold rounded-2xl shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {currentRide.status === 'accepted' ? "Arrived (وصلت للعميل)" : "Complete (إنهاء الرحلة)"}
-                </Button>
+                {/* Primary Action Button (Arrived Only - Customer Ends Ride) */}
+                {currentRide.status === 'accepted' && (
+                  <Button
+                    onClick={handleCompleteRide}
+                    className="w-full h-16 mt-6 bg-[#F5D848] hover:bg-[#E5C838] text-black text-xl font-bold rounded-2xl shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Arrived (وصلت للعميل)
+                  </Button>
+                )}
+
+                {currentRide.status === 'in_progress' && (
+                  <div className="w-full h-16 mt-6 bg-black/50 text-white flex items-center justify-center rounded-2xl border border-white/10 animate-pulse">
+                    <span className="text-lg font-medium">Waiting for customer to end ride...</span>
+                  </div>
+                )}
               </div>
             </div>
           </>
