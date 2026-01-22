@@ -981,26 +981,97 @@ const DriverDashboard = () => {
 
             {/* Trip Progress (Moved to Top) */}
             <div className="mb-6">
-              <div className="flex justify-between items-center mb-2 px-1">
-                <div>
-                  <span className="text-2xl font-bold text-white">1.3</span> <span className="text-xs text-gray-500">km</span>
-                </div>
-                <div className="text-gray-600">•</div>
-                <div>
-                  <span className="text-2xl font-bold text-white">2</span> <span className="text-xs text-gray-500">min</span>
-                </div>
-              </div>
-              <div className="relative h-2 bg-gray-800 rounded-full mx-1">
-                <div className="absolute top-0 left-0 bottom-0 bg-[#84cc16] w-2/3 rounded-full shadow-[0_0_10px_#84cc16]"></div>
-                <div className="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16]">
-                  <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-3 px-1">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-bold text-white">03:36 PM</span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider ml-1">ESTIMATED ARRIVAL</span>
-              </div>
+              {(() => {
+                // Dynamic Calculation Logic
+                let targetLat = 0, targetLng = 0;
+                let totalDist = 0;
+                let mode = ""; // 'pickup' or 'dropoff'
+
+                if (currentRide.status === 'accepted') {
+                  targetLat = currentRide.pickup_lat;
+                  targetLng = currentRide.pickup_lng;
+                  mode = "pickup";
+                  // Estimate initial distance if known, else assume max 5km for bar scale? 
+                  // Ideally we'd have initial_distance in DB. 
+                  totalDist = 5; // Default reference for bar
+                } else if (currentRide.status === 'in_progress') {
+                  targetLat = currentRide.destination_lat;
+                  targetLng = currentRide.destination_lng;
+                  mode = "dropoff";
+                  totalDist = currentRide.distance || 10;
+                }
+
+                // Haversine Distance
+                const R = 6371; // km
+                const dLat = (targetLat - driverLocation[0]) * Math.PI / 180;
+                const dLon = (targetLng - driverLocation[1]) * Math.PI / 180;
+                const a =
+                  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(driverLocation[0] * Math.PI / 180) * Math.cos(targetLat * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const distKm = R * c;
+
+                // Estimate Time (Assume 30km/h inside city)
+                const speedKmh = 30;
+                const timeHours = distKm / speedKmh;
+                const timeMin = Math.ceil(timeHours * 60);
+
+                // Progress Bar
+                // For pickup: calculate inverse progress (getting closer). 
+                // We'll just show 'remaining' concept. Visual bar represents completion.
+                // If distKm > totalDist, we are far (0% progress). If distKm is 0, we are there.
+                // Progress = 1 - (current / starting). But we don't have starting live.
+                // Simpler: Bar shows proximity. 
+                // Let's use a "Reverse Progress" for the slider.
+                // if we define progress as % of Journey Completed.
+                // This is hard without start point. But for 'in_progress' we have total trip distance.
+
+                let progressPercent = 0;
+                if (mode === 'dropoff' && totalDist > 0) {
+                  progressPercent = Math.max(0, Math.min(100, ((totalDist - distKm) / totalDist) * 100));
+                } else {
+                  // For pickup, maybe just show indeterminate or 50%?
+                  // Or let's just base it on distance: closer = more green. 
+                  // Say max pickup range is 3km.
+                  // progressPercent = (1 - (distKm / 3)) * 100
+                  progressPercent = Math.max(10, Math.min(95, (1 - (distKm / 5)) * 100));
+                }
+
+                // Format Arrival Time
+                const arrivalTime = new Date(Date.now() + timeMin * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return (
+                  <>
+                    <div className="flex justify-between items-center mb-2 px-1">
+                      <div>
+                        <span className="text-2xl font-bold text-white">{distKm.toFixed(1)}</span> <span className="text-xs text-gray-500">km</span>
+                      </div>
+                      <div className="text-gray-600">•</div>
+                      <div>
+                        <span className="text-2xl font-bold text-white">{timeMin}</span> <span className="text-xs text-gray-500">min</span>
+                      </div>
+                    </div>
+                    <div className="relative h-2 bg-gray-800 rounded-full mx-1">
+                      <div
+                        className="absolute top-0 left-0 bottom-0 bg-[#84cc16] rounded-full shadow-[0_0_10px_#84cc16] transition-all duration-1000"
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16] transition-all duration-1000"
+                        style={{ left: `${progressPercent}%` }}
+                      >
+                        <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3 px-1">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-bold text-white">{arrivalTime}</span>
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider ml-1">ESTIMATED ARRIVAL</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Header (Status) */}
