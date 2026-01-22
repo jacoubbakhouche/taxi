@@ -278,17 +278,7 @@ const CustomerDashboard = () => {
     }
   };
 
-  const fetchDriverDetails = async (driverId: string) => {
-    const { data: driver } = await supabase.from('users').select('*').eq('id', driverId).single();
-    if (driver) {
-      const { count } = await supabase.from('rides').select('*', { count: 'exact', head: true }).eq('driver_id', driverId).eq('status', 'completed');
-      setDriverInfo({ ...driver, total_rides: count || 0 });
 
-      if (driver.current_lat != null && driver.current_lng != null) {
-        setDriverLocation([driver.current_lat, driver.current_lng]);
-      }
-    }
-  };
 
   const resetState = () => {
     setCurrentRideId(null);
