@@ -962,104 +962,142 @@ const DriverDashboard = () => {
       {/* --- Active Ride Info (Accepted/In Progress) --- */}
       {/* --- Active Ride Info (Accepted/In Progress) --- */}
       {currentRide && !showRating && (
-        <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#1A1A1A] p-6 rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          {/* Header */}
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={cn(
-                  "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                  currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-yellow-500 text-black"
-                )}>
-                  {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
-                </span>
-              </div>
-              <h2 className="text-xl font-bold text-white">
-                {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
-              </h2>
-            </div>
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button size="icon" variant="secondary" className="rounded-full bg-[#84cc16] text-black hover:bg-[#65a30d]" onClick={() => window.location.href = `tel:${customerInfo?.phone}`}>
-                <Navigation className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-2xl border border-white/5" onClick={handleCustomerClick}>
-            <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10">
-              {customerInfo?.profile_image ? (
-                <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-bold">{customerInfo?.full_name?.[0]}</div>
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
-              <div className="flex items-center gap-1 text-xs text-yellow-500">
-                <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} ({customerInfo?.total_rides || 0} rides)
-              </div>
-            </div>
-            <div className="flex-1 text-right">
-              <p className="text-xl font-bold text-white">{currentRide.final_price || currentRide.price} DA</p>
-              <p className="text-xs text-gray-500">CASH</p>
-            </div>
-          </div>
-
-          {/* Trip Progress Stats */}
-          <div className="flex justify-between items-center mb-2 px-2">
-            <div>
-              <span className="text-2xl font-bold text-white">1.3</span> <span className="text-xs text-gray-500">km</span>
-            </div>
-            <div className="text-gray-600">
-              •
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-white">2</span> <span className="text-xs text-gray-500">min</span>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="relative h-2 bg-gray-800 rounded-full mb-6 mx-2">
-            <div className="absolute top-0 left-0 bottom-0 bg-[#84cc16] w-2/3 rounded-full shadow-[0_0_10px_#84cc16]"></div>
-            <div className="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16]">
-              <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
-            </div>
-          </div>
-
-          {/* Arrival Time */}
-          <div className="flex items-center gap-3 mb-6 px-2">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
-              <Car className="w-5 h-5 text-[#F5D848]" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-white">03:36 PM</p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">ESTIMATED ARRIVAL</p>
-            </div>
-          </div>
-
-          {/* Complete Button */}
-          <Button
-            size="lg"
-            className="w-full h-14 text-lg font-bold rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90 shadow-lg shadow-yellow-500/10"
-            onClick={handleCompleteRide}
+        <div
+          className={cn(
+            "fixed bottom-0 left-0 right-0 z-[2000] bg-[#1A1A1A] rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out",
+            isSheetExpanded ? "translate-y-0" : "translate-y-[calc(100%-120px)]"
+          )}
+        >
+          {/* Handle Bar (Toggle) */}
+          <div
+            className="w-full flex justify-center pt-4 pb-2 cursor-pointer"
+            onClick={() => setIsSheetExpanded(!isSheetExpanded)}
           >
-            <CheckCircle className="mr-2 w-6 h-6" /> COMPLETE RIDE
-          </Button>
-        </div>
+            <div className="h-1.5 w-12 bg-gray-700 rounded-full opacity-50"></div>
+          </div>
+
+          <div className="p-6 pt-2">
+            {/* Trip Progress (Top) */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2 px-1">
+                <div>
+                  <span className="text-2xl font-bold text-white">1.3</span> <span className="text-xs text-gray-500">km</span>
+                </div>
+                <div className="text-gray-600">•</div>
+                <div>
+                  <span className="text-2xl font-bold text-white">2</span> <span className="text-xs text-gray-500">min</span>
+                </div>
+              </div>
+              <div className="relative h-2 bg-gray-800 rounded-full mx-1">
+                <div className="absolute top-0 left-0 bottom-0 bg-[#84cc16] w-2/3 rounded-full shadow-[0_0_10px_#84cc16]"></div>
+                <div className="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16]">
+                  <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3 px-1">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-bold text-white">03:36 PM</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider ml-1">ESTIMATED ARRIVAL</span>
+              </div>
+            </div>
+
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-yellow-500 text-black"
+                  )}>
+                    {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white">
+                  {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
+                </h2>
+              </div>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button size="icon" variant="secondary" className="rounded-full bg-[#84cc16] text-black hover:bg-[#65a30d]" onClick={() => window.location.href = `tel:${customerInfo?.phone}`}>
+                  <Phone className="w-5 h-5 fill-current" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Customer Info */}
+            <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-2xl border border-white/5" onClick={handleCustomerClick}>
+              <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10">
+                {customerInfo?.profile_image ? (
+                  <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-bold">{customerInfo?.full_name?.[0]}</div>
+                )}
+              </div>
+              <div>
+                <h3 className="font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
+                <div className="flex items-center gap-1 text-xs text-yellow-500">
+                  <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} ({customerInfo?.total_rides || 0} rides)
+                </div>
+              </div>
+              <div className="flex-1 text-right">
+                <p className="text-xl font-bold text-white">{currentRide.final_price || currentRide.price} DA</p>
+                <p className="text-xs text-gray-500">CASH</p>
+              </div>
+            </div>
+
+            {/* Trip Progress Stats */}
+            <div className="flex justify-between items-center mb-2 px-2">
+              <div>
+                <span className="text-2xl font-bold text-white">1.3</span> <span className="text-xs text-gray-500">km</span>
+              </div>
+              <div className="text-gray-600">
+                •
+              </div>
+              <div>
+                <span className="text-2xl font-bold text-white">2</span> <span className="text-xs text-gray-500">min</span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="relative h-2 bg-gray-800 rounded-full mb-6 mx-2">
+              <div className="absolute top-0 left-0 bottom-0 bg-[#84cc16] w-2/3 rounded-full shadow-[0_0_10px_#84cc16]"></div>
+              <div className="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16]">
+                <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
+              </div>
+            </div>
+
+            {/* Arrival Time */}
+            <div className="flex items-center gap-3 mb-6 px-2">
+              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+                <Car className="w-5 h-5 text-[#F5D848]" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white">03:36 PM</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">ESTIMATED ARRIVAL</p>
+              </div>
+            </div>
+
+            {/* Complete Button */}
+            <Button
+              size="lg"
+              className="w-full h-14 text-lg font-bold rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90 shadow-lg shadow-yellow-500/10"
+              onClick={handleCompleteRide}
+            >
+              <CheckCircle className="mr-2 w-6 h-6" /> COMPLETE RIDE
+            </Button>
+          </div>
       )}
 
-      {/* Rating Dialog */}
-      <RatingDialog
-        open={showRating}
-        onOpenChange={setShowRating}
-        onSubmit={handleRatingSubmit}
-        name={customerInfo?.full_name || "العميل"}
-        role="customer"
-      />
-    </div>
-  );
+          {/* Rating Dialog */}
+          <RatingDialog
+            open={showRating}
+            onOpenChange={setShowRating}
+            onSubmit={handleRatingSubmit}
+            name={customerInfo?.full_name || "العميل"}
+            role="customer"
+          />
+        </div>
+      );
 };
 
-export default DriverDashboard;
+      export default DriverDashboard;
