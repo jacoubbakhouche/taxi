@@ -26,34 +26,53 @@ const LocationPermission = () => {
 
 
     return (
-        <div className="min-h-screen bg-black flex flex-col items-center justify-between p-6 pb-12" dir="rtl">
-            <div className="flex-1 flex flex-col items-center justify-center w-full">
-                {/* Illustration */}
-                <div className="w-full max-w-sm aspect-square relative mb-8 flex items-center justify-center">
-                    {/* Using the generated green/black illustration */}
-                    <img
-                        src="/images/location_permission.png"
-                        alt="Location Permission"
-                        className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(132,204,22,0.2)]"
-                    />
-                </div>
+    return (
+        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-end p-6 pb-12 overflow-hidden relative font-sans" dir="rtl">
 
-                {/* Text Content */}
-                <div className="text-center space-y-4 max-w-xs">
-                    <h1 className="text-2xl font-bold text-white">
-                        السماح للتطبيق بالوصول إلى موقعك
-                    </h1>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                        هذا ضروري لكي يتمكن الكابتن الأقرب من تلقي طلب الركوب وتوفير أفضل تجربة لك.
-                    </p>
-                </div>
+            {/* Full Screen Background Image */}
+            <div className="absolute inset-0 z-0">
+                <img
+                    src="/images/location_permission_bg.png"
+                    alt="Location Permission Map"
+                    className="w-full h-full object-cover animate-in fade-in duration-1000"
+                />
+                {/* Gradient Overlay for Text Readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
             </div>
 
-            {/* Buttons */}
-            <div className="w-full max-w-md space-y-3">
+            {/* Content Section (Overlaid at bottom) */}
+            <div className="relative z-20 w-full max-w-md space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-700 delay-200">
+
+                <div className="text-center space-y-4">
+                    <div className="inline-block p-4 rounded-full bg-[#84cc16]/10 mb-2 border border-[#84cc16]/20 backdrop-blur-md">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#84cc16"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                    </div>
+
+                    <h1 className="text-3xl font-bold text-white drop-shadow-xl">
+                        السماح بالوصول <br /> <span className="text-[#84cc16]">لموقعك الحالي</span>
+                    </h1>
+
+                    <p className="text-gray-300 text-sm leading-relaxed px-4 opacity-90">
+                        لضمان وصول الكابتن إليك بسرعة ودقة، يرجى تمكين خدمات الموقع. هذا الإجراء ضروري لاستخدام التطبيق.
+                    </p>
+                </div>
+
                 <Button
                     onClick={handleEnableLocation}
-                    className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 text-lg rounded-xl shadow-[0_0_15px_rgba(132,204,22,0.4)] transition-all"
+                    className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-14 text-lg rounded-2xl shadow-[0_0_20px_rgba(132,204,22,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                     تمكين خدمات الموقع
                 </Button>
