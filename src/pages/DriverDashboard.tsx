@@ -22,6 +22,7 @@ const DriverDashboard = () => {
   const [destinationLocation, setDestinationLocation] = useState<[number, number] | null>(null);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
   const [isSheetExpanded, setIsSheetExpanded] = useState(true);
+  const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
 
 
 
@@ -642,7 +643,7 @@ const DriverDashboard = () => {
     }
   };
 
-  const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
+
 
   const handleRejectRide = async () => {
     if (!pendingRide) return;
