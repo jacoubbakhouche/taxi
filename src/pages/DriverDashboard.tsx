@@ -898,20 +898,32 @@ const DriverDashboard = () => {
           {/* Online Toggle */}
           <Button
             size="icon"
-            variant={isOnline ? "default" : "destructive"}
-            className={cn("rounded-full shadow-lg transition-all", isOnline ? "bg-green-500 hover:bg-green-600" : "")}
             onClick={toggleOnline}
+            className={cn(
+              "rounded-full w-10 h-10 transition-all duration-300 shadow-lg border border-white/10 backdrop-blur-md",
+              isOnline
+                ? "bg-black/60 text-[#84cc16] hover:bg-black/70 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
+                : "bg-black/60 text-red-500 hover:bg-black/70"
+            )}
           >
-            <Power className="w-5 h-5 text-white" />
+            <Power className="w-5 h-5 fill-current" />
           </Button>
 
           {/* Profile */}
-          <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => navigate("/driver/profile")}>
+          <Button
+            size="icon"
+            onClick={() => navigate('/driver/profile')}
+            className="rounded-full w-10 h-10 bg-black/60 backdrop-blur-md border border-white/10 text-white hover:bg-black/70 shadow-lg"
+          >
             <User className="w-5 h-5" />
           </Button>
 
           {/* Logout */}
-          <Button size="icon" variant="secondary" className="rounded-full shadow-lg bg-red-500/10 hover:bg-red-500/20 text-red-500" onClick={handleLogout}>
+          <Button
+            size="icon"
+            onClick={handleLogout}
+            className="rounded-full w-10 h-10 bg-black/60 backdrop-blur-md border border-white/10 text-red-500 hover:bg-black/70 shadow-lg hover:text-red-400"
+          >
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
