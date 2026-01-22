@@ -274,7 +274,8 @@ const DriverDashboard = () => {
         const { error: locationError } = await supabase
           .rpc('update_driver_location', {
             p_lat: newLocation[0],
-            p_lng: newLocation[1]
+            p_lng: newLocation[1],
+            p_heading: position.coords.heading || 0
           });
 
         if (locationError) {

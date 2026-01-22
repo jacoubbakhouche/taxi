@@ -24,6 +24,7 @@ interface MapProps {
     position: [number, number];
     popup?: string;
     icon?: string;
+    rotation?: number;
   }>;
   onMapClick?: (lat: number, lng: number) => void;
   route?: [number, number][];
@@ -75,7 +76,10 @@ function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
         // Determine icon based on marker.icon or fallback
         if (marker.icon === "🚗" || marker.icon === "car") {
           iconHtml = renderToStaticMarkup(
-            <div className="relative flex items-center justify-center w-10 h-10 bg-[#F5D848] rounded-full shadow-[0_0_15px_rgba(245,216,72,0.5)] border-2 border-white transform transition-transform hover:scale-110">
+            <div
+              className="relative flex items-center justify-center w-10 h-10 bg-[#F5D848] rounded-full shadow-[0_0_15px_rgba(245,216,72,0.5)] border-2 border-white transition-transform duration-500 will-change-transform"
+              style={{ transform: `rotate(${marker.rotation || 0}deg)` }}
+            >
               <Car className="w-5 h-5 text-black fill-black" />
             </div>
           );
