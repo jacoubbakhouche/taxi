@@ -177,8 +177,8 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
           scrollWheelZoom={true}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; Google Maps'
+            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
             className="dark-map-tiles"
           />
           <MapUpdater center={center} recenterKey={recenterKey} />
