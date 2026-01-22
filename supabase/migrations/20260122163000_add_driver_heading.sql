@@ -1,6 +1,9 @@
 -- Add heading column to users table
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS heading float DEFAULT 0.0;
 
+-- Drop old function to allow return type change (Fixes ERROR: 42P13)
+DROP FUNCTION IF EXISTS get_nearby_drivers(float, float, float);
+
 -- Update get_nearby_drivers to return heading
 CREATE OR REPLACE FUNCTION get_nearby_drivers(
   p_lat float,
@@ -38,6 +41,9 @@ BEGIN
     AND ST_DWithin(u.location, ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326), p_radius_meters);
 END;
 $$ LANGUAGE plpgsql;
+
+-- Drop old update function just in case
+DROP FUNCTION IF EXISTS update_driver_location(float, float);
 
 -- Update update_driver_location to accept heading
 CREATE OR REPLACE FUNCTION update_driver_location(
