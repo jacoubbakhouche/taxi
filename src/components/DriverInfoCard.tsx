@@ -15,6 +15,8 @@ interface DriverInfoCardProps {
     profile_image?: string;
     car_model?: string;
     license_plate?: string;
+    vehicle_color?: string;
+    vehicle_class?: string;
   };
   rideStatus?: string; // accepted, in_progress
   onCancel?: () => void;
@@ -62,9 +64,20 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
             <h2 className="text-2xl font-bold mb-1 tracking-tight text-white">
               {rideStatus === 'in_progress' ? "رحلة جارية" : "السائق قبل الطلب"}
             </h2>
-            <div className="flex items-center gap-2 text-gray-400 text-sm font-medium">
-              <Car className="w-4 h-4" />
-              <span>{driver.car_model || "سيارة أجرة"}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-white text-base font-medium">
+                <Car className="w-5 h-5 text-[#F5D848]" />
+                <span>{driver.car_model || "سيارة أجرة"}</span>
+                <span className="text-gray-400 text-sm">({driver.vehicle_color || "Yellow"})</span>
+              </div>
+              {driver.vehicle_class && (
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded w-fit ${driver.vehicle_class === 'luxury' ? 'bg-[#F5D848] text-black' :
+                  driver.vehicle_class === 'comfort' ? 'bg-blue-500 text-white' :
+                    'bg-gray-700 text-gray-300'
+                  }`}>
+                  {driver.vehicle_class}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
