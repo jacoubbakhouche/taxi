@@ -234,7 +234,7 @@ const DriverProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-secondary p-6 pb-20">
+      <div className="bg-[#1A1A1A] p-6 pb-20 border-b border-white/5">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
@@ -316,8 +316,8 @@ const DriverProfile = () => {
                       key={cls}
                       onClick={() => setEditVehicleClass(cls)}
                       className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${editVehicleClass === cls
-                          ? 'bg-[#F5D848] text-black shadow-lg'
-                          : 'text-white hover:bg-white/10'
+                        ? 'bg-[#F5D848] text-black shadow-lg'
+                        : 'text-white hover:bg-white/10'
                         }`}
                     >
                       {cls === 'standard' && 'اقتصادية'}
