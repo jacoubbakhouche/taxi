@@ -251,15 +251,19 @@ const CustomerDashboard = () => {
   // ===========================================
   const getPlaceName = async (lat: number, lng: number): Promise<string> => {
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      // Using BigDataCloud free client API which is CORS friendly
+      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ar`);
       const data = await res.json();
-      // Prefer precise address parts
-      const road = data.address?.road || "";
-      const suburb = data.address?.suburb || data.address?.neighbourhood || "";
-      const city = data.address?.city || data.address?.town || data.address?.village || "";
 
-      const full = [road, suburb, city].filter(Boolean).join(", ");
-      return full || data.display_name?.split(",")[0] || "موقع محدد";
+      const city = data.city || data.locality || "";
+      const principalSubdivision = data.principalSubdivision || "";
+      const countryName = data.countryName || "";
+
+      // Format: "City, Province"
+      const parts = [city, principalSubdivision].filter(p => p && p !== "");
+
+      if (parts.length > 0) return parts.join(", ");
+      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     } catch (error) {
       console.error("Geocoding failed", error);
       return "موقع محدد";
