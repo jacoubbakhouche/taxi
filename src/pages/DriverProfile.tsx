@@ -16,6 +16,7 @@ interface UserProfile {
   profile_image: string | null;
   rating: number;
   total_rides: number;
+  vehicle_type?: string;
 }
 
 interface Ride {
@@ -40,6 +41,7 @@ const DriverProfile = () => {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editImage, setEditImage] = useState("");
+  const [editVehicleType, setEditVehicleType] = useState("");
   const [totalEarnings, setTotalEarnings] = useState(0);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ const DriverProfile = () => {
       setProfile(user);
       setEditName(user.full_name);
       setEditImage(user.profile_image || "");
+      setEditVehicleType(user.vehicle_type || "");
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -118,6 +121,7 @@ const DriverProfile = () => {
         .update({
           full_name: editName,
           profile_image: editImage || null,
+          vehicle_type: editVehicleType || null,
         })
         .eq("id", profile.id);
 
@@ -127,6 +131,7 @@ const DriverProfile = () => {
         ...profile,
         full_name: editName,
         profile_image: editImage || null,
+        vehicle_type: editVehicleType || null,
       });
       setEditing(false);
       toast({
@@ -286,8 +291,8 @@ const DriverProfile = () => {
                       key={type.id}
                       onClick={() => setEditVehicleType(type.id)}
                       className={`cursor-pointer rounded-xl p-3 border-2 transition-all ${editVehicleType === type.id
-                          ? 'bg-[#F5D848] border-[#F5D848] text-black'
-                          : 'bg-white/10 border-white/10 text-white hover:bg-white/20'
+                        ? 'bg-[#F5D848] border-[#F5D848] text-black'
+                        : 'bg-white/10 border-white/10 text-white hover:bg-white/20'
                         }`}
                     >
                       <div className="text-2xl mb-1">{type.icon}</div>
