@@ -205,7 +205,7 @@ const CustomerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-[#1A1A1A] p-6 pb-20 border-b border-white/5">
+      <div className="bg-gradient-to-b from-[#F5D848] via-[#F5D848]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
