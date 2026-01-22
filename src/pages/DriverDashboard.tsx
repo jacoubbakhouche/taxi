@@ -873,261 +873,157 @@ const DriverDashboard = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center">
-            <Car className="w-5 h-5 text-primary-foreground" />
+      {/* --- Professional Header (Same as Customer) --- */}
+      <header className="absolute top-0 left-0 right-0 z-[3000] p-4 flex justify-between items-start">
+        {/* Logo/Status Box */}
+        <div className="bg-card/90 backdrop-blur border border-border rounded-full p-2 pr-4 pl-2 flex items-center gap-3 shadow-lg">
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+            isOnline ? "bg-green-500" : "bg-red-500"
+          )}>
+            <Car className="text-black w-4 h-4" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-white">Taxi DZ</h1>
-            <p className="text-xs text-muted-foreground">Driver Dashboard</p>
+            <h1 className="font-bold text-sm">Taxi DZ</h1>
+            <p className="text-[10px] text-muted-foreground font-medium">
+              {isOnline ? "You are Online" : "You are Offline"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_10px_#4ade80]' : 'bg-red-500'} transition-all duration-300`} />
-          <Button variant="ghost" size="icon" onClick={() => navigate("/driver/profile")} className="text-foreground hover:bg-white/10 rounded-full">
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {/* Online Toggle */}
+          <Button
+            size="icon"
+            variant={isOnline ? "default" : "destructive"}
+            className={cn("rounded-full shadow-lg transition-all", isOnline ? "bg-green-500 hover:bg-green-600" : "")}
+            onClick={toggleOnline}
+          >
+            <Power className="w-5 h-5 text-white" />
+          </Button>
+
+          {/* Profile */}
+          <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => navigate("/driver/profile")}>
             <User className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-foreground hover:bg-white/10 rounded-full">
+
+          {/* Logout */}
+          <Button size="icon" variant="secondary" className="rounded-full shadow-lg bg-red-500/10 hover:bg-red-500/20 text-red-500" onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 relative">
-        <Map center={driverLocation} markers={getMarkers()} route={getRoute()} zoom={14} recenterKey={locationKey} />
+      {/* --- Map Layer --- */}
+      <div className="absolute inset-0 z-0">
+        <Map
+          center={driverLocation}
+          markers={getMarkers()}
+          // If we have a destination (active ride), show route
+          route={
+            customerLocation && destinationLocation
+              ? [customerLocation, destinationLocation]
+              : undefined
+          }
+          onMapClick={() => { }}
+        />
+      </div>
 
-        {/* Distance & Duration Overlay */}
-        {pendingRide && (
-          <Card className="absolute top-4 left-1/2 -translate-x-1/2 p-3 z-[999] bg-[#1A1A1A]/90 backdrop-blur-md border border-[#F5D848]">
-            <div className="flex items-center gap-4 text-sm" dir="rtl">
-              <div className="flex items-center gap-1 text-white">
-                <MapPin className="w-4 h-4 text-[#F5D848]" />
-                <span className="font-bold">{pendingRide.distance?.toFixed(1)} كم</span>
-              </div>
-              <div className="flex items-center gap-1 text-white">
-                <Clock className="w-4 h-4 text-[#F5D848]" />
-                <span className="font-bold">{pendingRide.duration?.toFixed(0)} دقيقة</span>
-              </div>
+      {/* --- Overlay: Offline State --- */}
+      {!isOnline && (
+        <div className="absolute inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+          <div className="bg-[#1A1A1A] p-8 rounded-3xl border border-white/10 text-center space-y-4 shadow-2xl">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Power className="w-10 h-10 text-red-500" />
             </div>
-          </Card>
-        )}
-
-        {/* Professional Navigation UI Overlay - Only show when Online/Active */}
-        {/* IDLE STATE UI: Online/Offline Button & Waiting Indicator */}
-        {!currentRide && !pendingRide && (
-          <div className="absolute bottom-8 left-4 right-4 z-[1000] space-y-3 pointer-events-none">
-            <div className="pointer-events-auto space-y-3">
-              <Button
-                onClick={toggleOnline}
-                disabled={loading}
-                className={`w-full h-16 text-xl font-bold shadow-lg transition-all duration-300 rounded-2xl ${isOnline
-                  ? "bg-red-500 hover:bg-red-600 text-white"
-                  : "bg-[#F5D848] hover:bg-[#FCC419] text-black"
-                  }`}
-              >
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Power className="w-6 h-6 ml-2" />}
-                {isOnline ? "إيقاف الاتصال (Offline)" : "اتصل الآن (Go Online)"}
-              </Button>
-
-              <Button
-                onClick={getCurrentLocation}
-                variant="secondary"
-                className="w-full bg-[#1A1A1A] text-white hover:bg-[#333] border border-[#333] h-12 rounded-xl"
-              >
-                <Navigation className="w-4 h-4 ml-2" />
-                تحديث الموقع
-              </Button>
-            </div>
-
-            {isOnline && (
-              <Card className="p-3 bg-[#1A1A1A]/90 border border-[#333] backdrop-blur-md mx-auto w-fit pointer-events-auto">
-                <p className="text-center text-sm text-[#888] flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                  </span>
-                  في انتظار طلبات جديدة...
-                </p>
-              </Card>
-            )}
+            <h2 className="text-2xl font-bold">You are Offline</h2>
+            <p className="text-gray-400 max-w-xs">You are not receiving ride requests. Go online to start working.</p>
+            <Button size="lg" className="w-full bg-green-500 hover:bg-green-600 text-black font-bold rounded-xl" onClick={toggleOnline}>
+              GO ONLINE
+            </Button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* PENDING RIDE REQUEST CARD */}
-        {pendingRide && (
-          <div className="absolute bottom-0 left-0 right-0 z-[1001] p-0">
-            <RideRequestCard
-              ride={{
-                id: pendingRide.id,
-                pickup_address: pendingRide.pickup_address,
-                destination_address: pendingRide.destination_address,
-                distance: pendingRide.distance || 0,
-                duration: pendingRide.duration || 0,
-                price: pendingRide.price || 0,
-                pickup_lat: pendingRide.pickup_lat,
-                pickup_lng: pendingRide.pickup_lng,
-              }}
-              customer={customerInfo}
-              onAccept={handleAcceptRide}
-              onInstantAccept={handleInstantAccept}
-              onReject={handleRejectRide}
-              onCustomerClick={handleCustomerClick}
-              loading={loading}
-              isExpanded={isSheetExpanded}
-              onToggleExpand={() => setIsSheetExpanded(!isSheetExpanded)}
-            />
+      {/* --- Ride Request Card (Pending) --- */}
+      {pendingRide && isSheetExpanded && (
+        <RideRequestCard
+          ride={pendingRide}
+          customer={customerInfo}
+          distance={1.0} // Ideally passed
+          onAccept={handleAcceptRide}
+          onReject={handleRejectRide}
+        />
+      )}
+
+      {/* --- Active Ride Info (Accepted/In Progress) --- */}
+      {currentRide && (
+        <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#1A1A1A] p-6 rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                  currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-yellow-500 text-black"
+                )}>
+                  {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
+              </h2>
+            </div>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button size="icon" variant="secondary" className="rounded-full bg-[#84cc16] text-black hover:bg-[#65a30d]" onClick={() => window.location.href = `tel:${customerInfo?.phone}`}>
+                <Navigation className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-        )}
 
-        {/* ACTIVE RIDE NAVIGATION UI */}
-        {currentRide && (
-          <>
-            {/* Top Navigation Header (Turn-by-Turn) */}
-            <div className="absolute top-4 left-0 right-0 z-[1000] flex justify-center px-4 pointer-events-none">
-              <div className="bg-[#1A1A1A] text-white rounded-[2rem] px-6 py-4 flex items-center gap-4 shadow-2xl min-w-[280px] pointer-events-auto border border-gray-800/50 backdrop-blur-md">
-                <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden flex-shrink-0">
-                  <img
-                    src={customerInfo?.profile_image || "https://github.com/shadcn.png"}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <div className="bg-white/10 p-1.5 rounded-lg">
-                      <Navigation className="w-6 h-6 text-white rotate-90" fill="currentColor" />
-                    </div>
-                    <span className="text-3xl font-bold tracking-tight">
-                      {calculateDistance(
-                        driverLocation[0],
-                        driverLocation[1],
-                        currentRide.status === 'accepted' ? currentRide.pickup_lat : currentRide.destination_lat,
-                        currentRide.status === 'accepted' ? currentRide.pickup_lng : currentRide.destination_lng
-                      ).toFixed(1)}
-                      <span className="text-xl text-gray-400 font-normal"> km</span>
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest text-[#F5D848] font-bold mb-1">
-                      {currentRide.status === 'accepted' ? "PICKUP (الركوب)" : "DROPOFF (الوجهة)"}
-                    </span>
-                    <p className="text-gray-400 text-sm font-medium tracking-wide truncate max-w-[200px] mx-auto">
-                      {(currentRide.status === 'accepted' ? currentRide.pickup_address : currentRide.destination_address)?.split(',')[0]}
-                    </p>
-                  </div>
-                </div>
-                <div
-                  onClick={getCurrentLocation}
-                  className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center cursor-pointer hover:bg-[#333] transition-colors"
-                >
-                  <Navigation className="w-5 h-5 text-[#F5D848]" />
-                </div>
+          {/* Customer Info */}
+          <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-2xl border border-white/5" onClick={handleCustomerClick}>
+            <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10">
+              {customerInfo?.profile_image ? (
+                <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xl font-bold">{customerInfo?.full_name?.[0]}</div>
+              )}
+            </div>
+            <div>
+              <h3 className="font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
+              <div className="flex items-center gap-1 text-xs text-yellow-500">
+                <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} ({customerInfo?.total_rides || 0} rides)
               </div>
             </div>
-
-            {/* Speedometer (Left Side) */}
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-4 pointer-events-none">
-              <div className="bg-[#1A1A1A]/90 backdrop-blur rounded-[2rem] p-3 flex flex-col items-center gap-2 border border-white/5 shadow-xl w-20 pointer-events-auto">
-                <div className="w-14 h-14 rounded-full border-[3px] border-red-500/80 flex items-center justify-center bg-[#251010]">
-                  <span className="text-2xl font-bold text-white">60</span>
-                </div>
-                <span className="text-4xl font-bold text-white tracking-tighter">00</span>
-              </div>
+            <div className="flex-1 text-right">
+              <p className="text-xl font-bold text-white">{currentRide.final_price || currentRide.price} DA</p>
+              <p className="text-xs text-gray-500">CASH</p>
             </div>
+          </div>
 
-            {/* Bottom Trip Progress & Controls */}
-            <div className="absolute bottom-8 left-4 right-4 z-[1000] flex flex-col gap-4 pointer-events-none">
+          {/* Complete Button */}
+          <Button
+            size="lg"
+            className="w-full h-14 text-lg font-bold rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90 shadow-lg shadow-yellow-500/10"
+            onClick={handleCompleteRide}
+          >
+            <CheckCircle className="mr-2 w-6 h-6" /> COMPLETE RIDE
+          </Button>
+        </div>
+      )}
 
-              {/* Trip Progress Bar Card */}
-              <div className="bg-[#1A1A1A] rounded-[2rem] p-5 shadow-2xl border border-white/5 backdrop-blur-xl pointer-events-auto">
-                {/* Stats Row */}
-                <div className="flex justify-center items-baseline gap-2 mb-6">
-                  <span className="text-2xl font-bold text-white">{(currentRide.distance || 0).toFixed(1)}</span>
-                  <span className="text-sm text-gray-400 font-medium">km</span>
-                  <span className="text-gray-600 mx-2">•</span>
-                  <span className="text-2xl font-bold text-white">{(currentRide.duration || 0).toFixed(0)}</span>
-                  <span className="text-sm text-gray-400 font-medium">min</span>
-                </div>
-
-                {/* Custom Progress Slider Visual */}
-                <div className="relative h-2 bg-gray-800 rounded-full mb-6 mx-2">
-                  {/* Active Path (Green) */}
-                  <div
-                    className="absolute right-0 top-0 bottom-0 bg-[#55F079] rounded-full shadow-[0_0_15px_rgba(85,240,121,0.4)] transition-all duration-1000"
-                    style={{
-                      width: (() => {
-                        if (!currentRide || !driverLocation) return '0%';
-                        if (currentRide.status === 'accepted' && customerLocation) {
-                          // Progress to Pickup
-                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng) + calculateDistance(driverLocation[0], driverLocation[1], currentRide.pickup_lat, currentRide.pickup_lng); // Rough approx for now
-                          return '50%'; // Simplified for now as we don't have start point of driver
-                        }
-                        if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
-                          // Progress to Destination
-                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng);
-                          const remainingDist = calculateDistance(driverLocation[0], driverLocation[1], currentRide.destination_lat, currentRide.destination_lng);
-                          const progress = Math.min(100, Math.max(0, ((totalDist - remainingDist) / totalDist) * 100));
-                          return `${progress}%`;
-                        }
-                        return '0%';
-                      })()
-                    }}
-                  ></div>
-
-                  {/* Car Position Indicator (Yellow Arrow) */}
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 translate-x-1/2 z-10 filter drop-shadow-[0_0_8px_rgba(245,216,72,0.6)] transition-all duration-1000"
-                    style={{
-                      right: (() => {
-                        if (!currentRide || !driverLocation) return '0%';
-                        if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
-                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng);
-                          const remainingDist = calculateDistance(driverLocation[0], driverLocation[1], currentRide.destination_lat, currentRide.destination_lng);
-                          const progress = Math.min(100, Math.max(0, ((totalDist - remainingDist) / totalDist) * 100));
-                          return `${progress}%`;
-                        }
-                        return '0%';
-                      })()
-                    }}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2L2 22L12 18L22 22L12 2Z" fill="#F5D848" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Bottom Action Area */}
-                <div className="flex items-center justify-end gap-4 mt-2">
-                  <div className="flex items-center gap-3">
-                    {/* Placeholder for alignment if needed, or just empty */}
-                  </div>
-                </div>
-
-                {/* Primary Action Button (Arrived / Complete) */}
-
-                {/* Primary Action Button (Arrived Only - Customer Ends Ride) */}
-                {currentRide.status === 'accepted' && (
-                  <Button
-                    onClick={handleCompleteRide}
-                    className="w-full h-16 mt-6 bg-[#F5D848] hover:bg-[#E5C838] text-black text-xl font-bold rounded-2xl shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Arrived (وصلت للعميل)
-                  </Button>
-                )}
-
-                {currentRide.status === 'in_progress' && (
-                  <div className="w-full h-16 mt-6 bg-[#1A1A1A] text-white flex items-center justify-between px-6 rounded-2xl border border-white/10 shadow-lg animate-in fade-in zoom-in duration-300">
-                    <span className="text-gray-400 font-medium text-sm">Total Price (السعر)</span>
-                    <span className="text-2xl font-bold text-[#F5D848] tabular-nums">{Math.round(currentRide.price || 0)} <span className="text-sm text-white">DZD</span></span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </div >
-    </div >
+      {/* Rating Dialog */}
+      <RatingDialog
+        open={showRating}
+        onOpenChange={setShowRating}
+        onSubmit={handleRatingSubmit}
+        name={customerInfo?.full_name || "العميل"}
+        role="customer"
+      />
+    </div>
   );
 };
 
