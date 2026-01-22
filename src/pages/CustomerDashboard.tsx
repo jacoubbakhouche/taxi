@@ -397,7 +397,7 @@ const CustomerDashboard = () => {
         pickup_lng: userLocation![1],
         destination_lat: destination[0],
         destination_lng: destination[1],
-        pickup_address: "موقعي",
+        pickup_address: await getPlaceName(userLocation![0], userLocation![1]),
         destination_address: searchQuery,
         price: price,
         distance: distance,

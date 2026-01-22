@@ -170,7 +170,7 @@ const CustomerProfile = () => {
           </div>
         </div>
         <div className="text-left">
-          <p className="text-xl font-bold text-primary">{ride.price} دج</p>
+          <p className="text-xl font-bold text-primary">{Math.round(ride.price)} دج</p>
           <p className="text-xs text-muted-foreground">
             {ride.distance?.toFixed(1)} كم
           </p>

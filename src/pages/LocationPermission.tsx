@@ -26,7 +26,6 @@ const LocationPermission = () => {
 
 
     return (
-    return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-end p-6 pb-12 overflow-hidden relative font-sans" dir="rtl">
 
             {/* Full Screen Background Image */}
