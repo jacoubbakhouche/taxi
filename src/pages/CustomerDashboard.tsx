@@ -205,7 +205,10 @@ const CustomerDashboard = () => {
         },
         (payload) => {
           const d = payload.new;
-          if (d.current_lat && d.current_lng) {
+          if (
+            d.current_lat != null &&
+            d.current_lng != null
+          ) {
             setDriverLocation([d.current_lat, d.current_lng]);
           }
         }
@@ -224,7 +227,13 @@ const CustomerDashboard = () => {
       // Get rides count
       const { count } = await supabase.from('rides').select('*', { count: 'exact', head: true }).eq('driver_id', driverId).eq('status', 'completed');
       setDriverInfo({ ...driver, total_rides: count || 0 });
-      setDriverLocation([driver.current_lat, driver.current_lng]);
+
+      if (
+        driver.current_lat != null &&
+        driver.current_lng != null
+      ) {
+        setDriverLocation([driver.current_lat, driver.current_lng]);
+      }
     }
   };
 
