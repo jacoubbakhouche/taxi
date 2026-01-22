@@ -959,7 +959,8 @@ const DriverDashboard = () => {
       )}
 
       {/* --- Active Ride Info (Accepted/In Progress) --- */}
-      {currentRide && (
+      {/* --- Active Ride Info (Accepted/In Progress) --- */}
+      {currentRide && !showRating && (
         <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#1A1A1A] p-6 rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           {/* Header */}
           <div className="flex justify-between items-start mb-6">
