@@ -265,14 +265,42 @@ const DriverProfile = () => {
 
 
           {editing ? (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-4 w-full max-w-md mx-auto">
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 className="text-center bg-white/20 border-white/30 text-white placeholder:text-white/60"
                 placeholder="الاسم الكامل"
               />
-              <div className="flex items-center justify-center gap-2">
+
+              <div className="space-y-2 text-right">
+                <label className="text-white text-sm font-bold block mb-2 px-1">نوع المركبة</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'taxi_owner', label: 'مالك طاكسي', icon: '🚕', desc: 'سيارة صفراء (رخصة)' },
+                    { id: 'taxi_rent', label: 'يعمل عند طاكسي', icon: '🔑', desc: 'سائق باليومية' },
+                    { id: 'vtc', label: 'سيارة سياحية', icon: '🚙', desc: 'نقل عبر التطبيقات' },
+                    { id: 'delivery', label: 'توصيل طلبات', icon: '📦', desc: 'دراجة أو سيارة' },
+                  ].map((type) => (
+                    <div
+                      key={type.id}
+                      onClick={() => setEditVehicleType(type.id)}
+                      className={`cursor-pointer rounded-xl p-3 border-2 transition-all ${editVehicleType === type.id
+                          ? 'bg-[#F5D848] border-[#F5D848] text-black'
+                          : 'bg-white/10 border-white/10 text-white hover:bg-white/20'
+                        }`}
+                    >
+                      <div className="text-2xl mb-1">{type.icon}</div>
+                      <div className="font-bold text-sm">{type.label}</div>
+                      <div className={`text-[10px] ${editVehicleType === type.id ? 'text-black/70' : 'text-gray-400'}`}>
+                        {type.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 pt-2">
                 <Button
                   type="button"
                   variant="secondary"
@@ -317,6 +345,17 @@ const DriverProfile = () => {
           ) : (
             <>
               <h1 className="text-2xl font-bold mt-4">{profile.full_name}</h1>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                {/* Display Vehicle Badge if exists */}
+                {profile.vehicle_type && (
+                  <span className="bg-[#F5D848] text-black px-2 py-0.5 rounded text-[10px] font-bold">
+                    {profile.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
+                    {profile.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
+                    {profile.vehicle_type === 'vtc' && '🚙 سائق خاص'}
+                    {profile.vehicle_type === 'delivery' && '📦 توصيل'}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-center gap-2 mt-2">
                 <Phone className="w-4 h-4" />
                 <p className="text-white/90">{profile.phone}</p>
