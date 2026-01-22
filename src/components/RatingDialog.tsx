@@ -12,11 +12,12 @@ import { Star } from "lucide-react";
 interface RatingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (rating: number) => void;
-  driverName: string;
+  onSubmit: (rating: number, comment?: string) => void;
+  name: string;
+  role: 'driver' | 'customer';
 }
 
-const RatingDialog = ({ open, onOpenChange, onSubmit, driverName }: RatingDialogProps) => {
+const RatingDialog = ({ open, onOpenChange, onSubmit, name, role }: RatingDialogProps) => {
   const [rating, setRating] = useState(5);
   const [hoveredRating, setHoveredRating] = useState(0);
 
@@ -31,7 +32,7 @@ const RatingDialog = ({ open, onOpenChange, onSubmit, driverName }: RatingDialog
         <DialogHeader>
           <DialogTitle className="text-center text-xl">🎉 تمت الرحلة بنجاح!</DialogTitle>
           <DialogDescription className="text-center">
-            كيف كانت تجربتك مع السائق {driverName}؟
+            {role === 'driver' ? `كيف كانت تجربتك مع السائق ${name}؟` : `كيف كان العميل ${name}؟`}
           </DialogDescription>
         </DialogHeader>
 
@@ -46,11 +47,10 @@ const RatingDialog = ({ open, onOpenChange, onSubmit, driverName }: RatingDialog
                 className="transition-transform hover:scale-110"
               >
                 <Star
-                  className={`w-10 h-10 ${
-                    star <= (hoveredRating || rating)
+                  className={`w-10 h-10 ${star <= (hoveredRating || rating)
                       ? "fill-yellow-400 text-yellow-400"
                       : "text-gray-300"
-                  }`}
+                    }`}
                 />
               </button>
             ))}

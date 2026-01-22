@@ -426,18 +426,22 @@ const CustomerDashboard = () => {
 
     try {
       // 1. Fetch online drivers
+      // We also check updated_at to ensure they are recently active (prevent zombie drivers)
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
       const { data: drivers, error } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'driver')
-        .eq('is_online', true);
+        .eq('is_online', true)
+        .gt('updated_at', fiveMinutesAgo); // Only drivers active in last 5 mins
 
       if (error) throw error;
 
       if (!drivers || drivers.length === 0) {
         toast({
           title: "لا يوجد سائقين",
-          description: "للأسف لا يوجد سائقين متاحين حالياً",
+          description: "للأسف لا يوجد سائقين نشطين حالياً",
           variant: "destructive"
         });
         setIsSearchingDriver(false);
@@ -623,6 +627,16 @@ const CustomerDashboard = () => {
       if (error) throw error;
 
       if (driverInfo) {
+        // 1. Insert review
+        await supabase.from('reviews').insert({
+          ride_id: currentRideId,
+          reviewer_id: userId,
+          reviewee_id: driverInfo.id,
+          rating: rating,
+          comment: "Rated by customer"
+        });
+
+        // 2. Update stats
         const newRating = ((driverInfo.rating * driverInfo.total_rides) + rating) / (driverInfo.total_rides + 1);
 
         await supabase
@@ -657,11 +671,13 @@ const CustomerDashboard = () => {
   const getMarkers = () => {
     const markers: Array<{ position: [number, number]; popup?: string; icon?: string }> = [];
 
-    markers.push({
-      position: userLocation,
-      popup: "موقعك الحالي",
-      icon: "🧍"
-    });
+    if (userLocation) {
+      markers.push({
+        position: userLocation,
+        popup: "موقعك الحالي",
+        icon: "🧍"
+      });
+    }
 
     if (destination && rideStatus === 'idle') {
       markers.push({
@@ -1035,7 +1051,8 @@ const CustomerDashboard = () => {
           open={showRating}
           onOpenChange={setShowRating}
           onSubmit={handleRating}
-          driverName={driverInfo.full_name}
+          name={driverInfo.full_name}
+          role="driver"
         />
       )}
     </div>

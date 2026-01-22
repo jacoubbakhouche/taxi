@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import RideRequestCard from "@/components/RideRequestCard";
+import RatingDialog from "@/components/RatingDialog";
 import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2 } from "lucide-react";
 
 const DriverDashboard = () => {
@@ -667,6 +668,8 @@ const DriverDashboard = () => {
     }
   };
 
+  const [showRating, setShowRating] = useState(false);
+
   const handleCompleteRide = async () => {
     if (!currentRide) return;
 
@@ -687,12 +690,12 @@ const DriverDashboard = () => {
 
       toast({
         title: "تمت الرحلة بنجاح! 🎉",
-        description: "شكراً لك",
+        description: "يرجى تقييم العميل",
       });
 
-      setCurrentRide(null);
-      setCustomerLocation(null);
-      setDestinationLocation(null);
+      // Delay cleaning content to show rating
+      setShowRating(true);
+
     } catch (error) {
       console.error('Error completing ride:', error);
       toast({
@@ -702,6 +705,43 @@ const DriverDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRatingSubmit = async (rating: number) => {
+    if (!currentRide || !customerInfo) return;
+
+    try {
+      // 1. Insert review
+      await supabase.from('reviews').insert({
+        ride_id: currentRide.id,
+        reviewer_id: userId,
+        reviewee_id: currentRide.customer_id,
+        rating: rating,
+        comment: "Rated by driver"
+      });
+
+      // 2. Update user aggregate rating
+      const newRating = ((customerInfo.rating * customerInfo.total_rides) + rating) / (customerInfo.total_rides + 1);
+
+      await supabase.from('users').update({
+        rating: newRating,
+        total_rides: customerInfo.total_rides + 1
+      }).eq('id', customerInfo.id);
+
+      toast({
+        title: "تم إرسال التقييم",
+        description: "شكراً لك!",
+      });
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setShowRating(false);
+      setCurrentRide(null);
+      setCustomerLocation(null);
+      setDestinationLocation(null);
+      setCustomerInfo(null);
     }
   };
 
