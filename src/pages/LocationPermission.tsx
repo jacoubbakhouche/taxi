@@ -23,9 +23,7 @@ const LocationPermission = () => {
         }
     };
 
-    const handleSkip = () => {
-        navigate("/role-selection");
-    };
+
 
     return (
         <div className="min-h-screen bg-black flex flex-col items-center justify-between p-6 pb-12" dir="rtl">
@@ -58,14 +56,6 @@ const LocationPermission = () => {
                     className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 text-lg rounded-xl shadow-[0_0_15px_rgba(132,204,22,0.4)] transition-all"
                 >
                     تمكين خدمات الموقع
-                </Button>
-
-                <Button
-                    variant="ghost"
-                    onClick={handleSkip}
-                    className="w-full text-gray-500 hover:text-white hover:bg-white/5 h-12 rounded-xl"
-                >
-                    تخطي
                 </Button>
             </div>
         </div>
