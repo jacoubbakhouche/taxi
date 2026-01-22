@@ -17,6 +17,9 @@ interface UserProfile {
   rating: number;
   total_rides: number;
   vehicle_type?: string;
+  car_model?: string;
+  vehicle_color?: string;
+  vehicle_class?: string;
 }
 
 interface Ride {
@@ -42,6 +45,9 @@ const DriverProfile = () => {
   const [editName, setEditName] = useState("");
   const [editImage, setEditImage] = useState("");
   const [editVehicleType, setEditVehicleType] = useState("");
+  const [editCarModel, setEditCarModel] = useState("");
+  const [editVehicleColor, setEditVehicleColor] = useState("");
+  const [editVehicleClass, setEditVehicleClass] = useState("standard");
   const [totalEarnings, setTotalEarnings] = useState(0);
 
   useEffect(() => {
@@ -69,6 +75,9 @@ const DriverProfile = () => {
       setEditName(user.full_name);
       setEditImage(user.profile_image || "");
       setEditVehicleType(user.vehicle_type || "");
+      setEditCarModel(user.car_model || "");
+      setEditVehicleColor(user.vehicle_color || "");
+      setEditVehicleClass(user.vehicle_class || "standard");
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -122,6 +131,9 @@ const DriverProfile = () => {
           full_name: editName,
           profile_image: editImage || null,
           vehicle_type: editVehicleType || null,
+          car_model: editCarModel || null,
+          vehicle_color: editVehicleColor || null,
+          vehicle_class: editVehicleClass || 'standard',
         })
         .eq("id", profile.id);
 
@@ -132,6 +144,9 @@ const DriverProfile = () => {
         full_name: editName,
         profile_image: editImage || null,
         vehicle_type: editVehicleType || null,
+        car_model: editCarModel || null,
+        vehicle_color: editVehicleColor || null,
+        vehicle_class: editVehicleClass || 'standard',
       });
       setEditing(false);
       toast({
@@ -277,6 +292,41 @@ const DriverProfile = () => {
                 className="text-center bg-white/20 border-white/30 text-white placeholder:text-white/60"
                 placeholder="الاسم الكامل"
               />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  value={editCarModel}
+                  onChange={(e) => setEditCarModel(e.target.value)}
+                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                  placeholder="طراز السيارة (مثلاً Toyota)"
+                />
+                <Input
+                  value={editVehicleColor}
+                  onChange={(e) => setEditVehicleColor(e.target.value)}
+                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                  placeholder="لون السيارة"
+                />
+              </div>
+
+              {/* Vehicle Type (Ownership) used above, here is Class */}
+              <div className="space-y-2 text-right">
+                <label className="text-white text-sm font-bold block mb-2 px-1">فئة السيارة</label>
+                <div className="flex gap-2 bg-white/10 p-1 rounded-xl">
+                  {['standard', 'comfort', 'luxury'].map((cls) => (
+                    <button
+                      key={cls}
+                      onClick={() => setEditVehicleClass(cls)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${editVehicleClass === cls
+                          ? 'bg-[#F5D848] text-black shadow-lg'
+                          : 'text-white hover:bg-white/10'
+                        }`}
+                    >
+                      {cls === 'standard' && 'اقتصادية'}
+                      {cls === 'comfort' && 'مريحة'}
+                      {cls === 'luxury' && 'فاخرة'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-2 text-right">
                 <label className="text-white text-sm font-bold block mb-2 px-1">نوع المركبة</label>
