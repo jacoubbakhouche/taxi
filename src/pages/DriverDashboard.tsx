@@ -9,6 +9,7 @@ import Map from "@/components/Map";
 import RideRequestCard from "@/components/RideRequestCard";
 import RatingDialog from "@/components/RatingDialog";
 import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
