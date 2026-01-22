@@ -27,14 +27,20 @@ interface MapProps {
   }>;
   onMapClick?: (lat: number, lng: number) => void;
   route?: [number, number][];
+  recenterKey?: number; // New prop to force re-center
 }
 
-function MapUpdater({ center }: { center: [number, number] }) {
+function MapUpdater({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
   const map = useMap();
 
   useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
+    if (center && center[0] !== 0 && center[1] !== 0) {
+      map.flyTo(center, 15, {
+        animate: true,
+        duration: 1.5
+      });
+    }
+  }, [center, map, recenterKey]);
 
   return null;
 }
@@ -139,7 +145,7 @@ async function getRoadRoute(start: [number, number], end: [number, number]) {
   }
 }
 
-const Map = ({ center, zoom = 13, markers = [], onMapClick, route }: MapProps) => {
+const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }: MapProps) => {
   const [enhancedRoute, setEnhancedRoute] = useState<[number, number][] | null>(null);
 
   const start = route && route.length === 2 ? route[0] : null;
@@ -170,7 +176,7 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route }: MapProps) =
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          <MapUpdater center={center} />
+          <MapUpdater center={center} recenterKey={recenterKey} />
           {onMapClick && <MapClickHandler onClick={onMapClick} />}
           <MapMarkers markers={markers} />
           {displayRoute && displayRoute.length > 0 && (

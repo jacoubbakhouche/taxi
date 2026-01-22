@@ -12,6 +12,7 @@ import CustomerProfile from "./pages/CustomerProfile";
 import DriverDashboard from "./pages/DriverDashboard";
 import CustomerProfileView from "./pages/CustomerProfileView";
 import DriverProfile from "./pages/DriverProfile";
+import DriverProfileView from "./pages/DriverProfileView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => {
             <Route path="/driver/dashboard" element={<DriverDashboard />} />
             <Route path="/driver/profile" element={<DriverProfile />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
+            <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

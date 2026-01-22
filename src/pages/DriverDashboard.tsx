@@ -85,7 +85,8 @@ const DriverDashboard = () => {
   }, [userId]);
 
   useEffect(() => {
-    if (!isOnline || !userId || !driverLocation) return;
+    // Prevent busy drivers from getting new requests
+    if (!isOnline || !userId || !driverLocation || currentRide) return;
 
     // 1. Listen for NEW pending rides
     const channel = supabase
@@ -102,9 +103,15 @@ const DriverDashboard = () => {
           const ride = payload.new as Ride;
           console.log('New ride request:', ride);
 
-          // NEW: If ride is assigned to a specific driver, ignore if it's not ME.
+          // If ride is assigned to a specific driver, ignore if it's not ME.
           if (ride.driver_id && ride.driver_id !== userId) {
             console.log('Ignoring ride assigned to another driver');
+            return;
+          }
+
+          // Check if we locally ignored this ride
+          if (ignoredRideIds.includes(ride.id)) {
+            console.log('Ignoring previously rejected ride');
             return;
           }
 
@@ -131,6 +138,7 @@ const DriverDashboard = () => {
 
             setIsSheetExpanded(true);
 
+            // Play sound
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi56+mjUBELUKzn77ljHAU7k9j0y3ktBSh+zPLaizsKGGS36Oynaw==');
             audio.play().catch(e => console.log('Audio play failed:', e));
 
@@ -146,7 +154,7 @@ const DriverDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOnline, userId, driverLocation]);
+  }, [isOnline, userId, driverLocation, currentRide, ignoredRideIds]);
 
   // 2. NEW: Listen for updates/delete to the CURRENT pending ride
   useEffect(() => {
@@ -418,11 +426,14 @@ const DriverDashboard = () => {
     return R * c;
   };
 
+  const [locationKey, setLocationKey] = useState(0);
+
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setDriverLocation([position.coords.latitude, position.coords.longitude]);
+          setLocationKey(prev => prev + 1); // Force map re-center
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -631,34 +642,22 @@ const DriverDashboard = () => {
     }
   };
 
+  const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
+
   const handleRejectRide = async () => {
     if (!pendingRide) return;
 
-    try {
-      const { error } = await supabase
-        .from('rides')
-        .delete()
-        .eq('id', pendingRide.id);
+    // Local ignore only - do NOT delete from DB so other drivers can see it
+    setIgnoredRideIds(prev => [...prev, pendingRide.id]);
 
-      if (error) {
-        console.error("Error rejecting ride:", error);
-        toast({
-          title: "خطأ",
-          description: "لم يتم رفض الطلب (تأكد من صلاحيات الحذف)",
-          variant: "destructive"
-        });
-        return;
-      }
+    setPendingRide(null);
+    setCustomerInfo(null);
+    setIsSheetExpanded(false);
 
-      setPendingRide(null);
-      setCustomerInfo(null);
-      toast({
-        title: "تم رفض الطلب",
-        description: "تم حذف الطلب بنجاح",
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    toast({
+      title: "تم تجاهل الطلب",
+      description: "لن يظهر لك هذا الطلب مرة أخرى",
+    });
   };
 
   const handleCustomerClick = () => {
@@ -815,7 +814,7 @@ const DriverDashboard = () => {
       </header>
 
       <div className="flex-1 relative">
-        <Map center={driverLocation} markers={getMarkers()} route={getRoute()} zoom={14} />
+        <Map center={driverLocation} markers={getMarkers()} route={getRoute()} zoom={14} recenterKey={locationKey} />
 
         {/* Distance & Duration Overlay */}
         {pendingRide && (
@@ -937,8 +936,11 @@ const DriverDashboard = () => {
                     </p>
                   </div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center cursor-pointer hover:bg-[#333] transition-colors">
-                  <MapPin className="w-5 h-5 text-white" />
+                <div
+                  onClick={getCurrentLocation}
+                  className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center cursor-pointer hover:bg-[#333] transition-colors"
+                >
+                  <Navigation className="w-5 h-5 text-[#F5D848]" />
                 </div>
               </div>
             </div>
@@ -970,10 +972,44 @@ const DriverDashboard = () => {
                 {/* Custom Progress Slider Visual */}
                 <div className="relative h-2 bg-gray-800 rounded-full mb-6 mx-2">
                   {/* Active Path (Green) */}
-                  <div className="absolute right-0 top-0 bottom-0 w-[60%] bg-[#55F079] rounded-full shadow-[0_0_15px_rgba(85,240,121,0.4)]"></div>
+                  <div
+                    className="absolute right-0 top-0 bottom-0 bg-[#55F079] rounded-full shadow-[0_0_15px_rgba(85,240,121,0.4)] transition-all duration-1000"
+                    style={{
+                      width: (() => {
+                        if (!currentRide || !driverLocation) return '0%';
+                        if (currentRide.status === 'accepted' && customerLocation) {
+                          // Progress to Pickup
+                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng) + calculateDistance(driverLocation[0], driverLocation[1], currentRide.pickup_lat, currentRide.pickup_lng); // Rough approx for now
+                          return '50%'; // Simplified for now as we don't have start point of driver
+                        }
+                        if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
+                          // Progress to Destination
+                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng);
+                          const remainingDist = calculateDistance(driverLocation[0], driverLocation[1], currentRide.destination_lat, currentRide.destination_lng);
+                          const progress = Math.min(100, Math.max(0, ((totalDist - remainingDist) / totalDist) * 100));
+                          return `${progress}%`;
+                        }
+                        return '0%';
+                      })()
+                    }}
+                  ></div>
 
                   {/* Car Position Indicator (Yellow Arrow) */}
-                  <div className="absolute top-1/2 right-[60%] -translate-y-1/2 translate-x-1/2 z-10 filter drop-shadow-[0_0_8px_rgba(245,216,72,0.6)]">
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 translate-x-1/2 z-10 filter drop-shadow-[0_0_8px_rgba(245,216,72,0.6)] transition-all duration-1000"
+                    style={{
+                      right: (() => {
+                        if (!currentRide || !driverLocation) return '0%';
+                        if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
+                          const totalDist = calculateDistance(currentRide.pickup_lat, currentRide.pickup_lng, currentRide.destination_lat, currentRide.destination_lng);
+                          const remainingDist = calculateDistance(driverLocation[0], driverLocation[1], currentRide.destination_lat, currentRide.destination_lng);
+                          const progress = Math.min(100, Math.max(0, ((totalDist - remainingDist) / totalDist) * 100));
+                          return `${progress}%`;
+                        }
+                        return '0%';
+                      })()
+                    }}
+                  >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2L2 22L12 18L22 22L12 2Z" fill="#F5D848" stroke="white" strokeWidth="2" strokeLinejoin="round" />
                     </svg>
@@ -981,31 +1017,14 @@ const DriverDashboard = () => {
                 </div>
 
                 {/* Bottom Action Area */}
-                <div className="flex items-center justify-between gap-4 mt-2">
+                <div className="flex items-center justify-end gap-4 mt-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#2A2A2A] rounded-2xl flex items-center justify-center border border-white/5">
-                      {/* Replaced broken image with reliable icon */}
-                      <Car className="w-8 h-8 text-[#F5D848]" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-white tabular-nums tracking-tight">
-                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      <div className="text-xs text-gray-500 font-medium tracking-wide">ESTIMATED ARRIVAL</div>
-                    </div>
+                    {/* Placeholder for alignment if needed, or just empty */}
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsSheetExpanded(!isSheetExpanded)}
-                    className="rounded-full hover:bg-white/10 text-white w-10 h-10"
-                  >
-                    {isSheetExpanded ? <User className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
-                  </Button>
                 </div>
 
                 {/* Primary Action Button (Arrived / Complete) */}
+
                 {/* Primary Action Button (Arrived Only - Customer Ends Ride) */}
                 {currentRide.status === 'accepted' && (
                   <Button
@@ -1019,7 +1038,7 @@ const DriverDashboard = () => {
                 {currentRide.status === 'in_progress' && (
                   <div className="w-full h-16 mt-6 bg-[#1A1A1A] text-white flex items-center justify-between px-6 rounded-2xl border border-white/10 shadow-lg animate-in fade-in zoom-in duration-300">
                     <span className="text-gray-400 font-medium text-sm">Total Price (السعر)</span>
-                    <span className="text-2xl font-bold text-[#F5D848] tabular-nums">{currentRide.price || 0} <span className="text-sm text-white">DZD</span></span>
+                    <span className="text-2xl font-bold text-[#F5D848] tabular-nums">{Math.round(currentRide.price || 0)} <span className="text-sm text-white">DZD</span></span>
                   </div>
                 )}
               </div>

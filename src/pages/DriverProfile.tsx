@@ -183,7 +183,7 @@ const DriverProfile = () => {
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-center justify-between pt-2 border-t">
         <p className="text-xs text-muted-foreground">{formatDate(ride.created_at)}</p>
         {ride.rating && (
@@ -257,12 +257,13 @@ const DriverProfile = () => {
 
         <div className="text-center text-white">
           <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
-            <AvatarImage src={profile.profile_image || undefined} />
+            <AvatarImage src={editImage || profile.profile_image || undefined} className="object-cover" />
             <AvatarFallback className="bg-white text-primary text-2xl">
               <Car className="w-12 h-12" />
             </AvatarFallback>
           </Avatar>
-          
+
+
           {editing ? (
             <div className="mt-4 space-y-2">
               <Input
@@ -271,12 +272,47 @@ const DriverProfile = () => {
                 className="text-center bg-white/20 border-white/30 text-white placeholder:text-white/60"
                 placeholder="الاسم الكامل"
               />
-              <Input
-                value={editImage}
-                onChange={(e) => setEditImage(e.target.value)}
-                className="text-center bg-white/20 border-white/30 text-white placeholder:text-white/60"
-                placeholder="رابط الصورة"
-              />
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full bg-[#F5D848] text-black hover:bg-[#F5D848]/90"
+                  onClick={() => document.getElementById('driver-file-upload')?.click()}
+                  disabled={loading}
+                >
+                  تغيير الصورة
+                </Button>
+                <input
+                  id="driver-file-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const filePath = `${Math.random()}.${fileExt}`;
+
+                      const { error: uploadError } = await supabase.storage
+                        .from('avatars')
+                        .upload(filePath, file);
+
+                      if (uploadError) throw uploadError;
+
+                      const { data } = supabase.storage
+                        .from('avatars')
+                        .getPublicUrl(filePath);
+
+                      setEditImage(data.publicUrl);
+                      toast({ title: "تم رفع الصورة بنجاح" });
+                    } catch (error) {
+                      toast({ title: "failed to upload", variant: "destructive" });
+                    }
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <>

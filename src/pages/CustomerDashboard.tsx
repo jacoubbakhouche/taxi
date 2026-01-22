@@ -65,7 +65,14 @@ const CustomerDashboard = () => {
                 .single();
 
               if (driver) {
-                setDriverInfo(driver);
+                // Fetch actual ride count
+                const { count } = await supabase
+                  .from('rides')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('driver_id', driver.id)
+                  .eq('status', 'completed');
+
+                setDriverInfo({ ...driver, total_rides: count || 0 });
                 setDriverLocation([driver.current_lat, driver.current_lng]);
               }
             }
@@ -116,7 +123,14 @@ const CustomerDashboard = () => {
               .single();
 
             if (driver) {
-              setDriverInfo(driver);
+              // Fetch actual ride count
+              const { count } = await supabase
+                .from('rides')
+                .select('*', { count: 'exact', head: true })
+                .eq('driver_id', driver.id)
+                .eq('status', 'completed');
+
+              setDriverInfo({ ...driver, total_rides: count || 0 });
               setDriverLocation([driver.current_lat, driver.current_lng]);
             }
           }
@@ -130,7 +144,14 @@ const CustomerDashboard = () => {
               .eq('id', refetchedRide.driver_id)
               .single();
             if (driver) {
-              setDriverInfo(driver);
+              // Fetch actual ride count
+              const { count } = await supabase
+                .from('rides')
+                .select('*', { count: 'exact', head: true })
+                .eq('driver_id', driver.id)
+                .eq('status', 'completed');
+
+              setDriverInfo({ ...driver, total_rides: count || 0 });
               setDriverLocation([driver.current_lat, driver.current_lng]);
             }
           }
@@ -424,31 +445,39 @@ const CustomerDashboard = () => {
       }
 
       // 2. Filter out declined drivers
-      const availableDrivers = drivers.filter(d => !declinedDrivers.includes(d.id));
+      let availableDrivers = drivers.filter(d => !declinedDrivers.includes(d.id));
+
+      // 3. Filter out BUSY drivers (drivers with active rides)
+      // We need to check the rides table for any accepted/in_progress rides for these drivers
+      const driverIds = availableDrivers.map(d => d.id);
+
+      if (driverIds.length > 0) {
+        const { data: busyRides } = await supabase
+          .from('rides')
+          .select('driver_id')
+          .in('status', ['accepted', 'in_progress'])
+          .in('driver_id', driverIds);
+
+        const busyDriverIds = busyRides?.map(r => r.driver_id) || [];
+        availableDrivers = availableDrivers.filter(d => !busyDriverIds.includes(d.id));
+      }
 
       if (availableDrivers.length === 0) {
         toast({
-          title: "لا يوجد سائقين جدد",
-          description: "لقد شاهدت جميع السائقين المتاحين",
+          title: "لا يوجد سائقين متاحين",
+          description: "جميع السائقين مشغولون حالياً، حاول مرة أخرى لاحقاً",
           variant: "default"
         });
         setIsSearchingDriver(false);
         return;
       }
 
-      // 3. Sort by distance (Simple approximation using coords if available)
-      // Note: Real production apps need PostGIS. Here we filter locally.
-      // We assume userLocation is updated.
+      // 4. Sort by distance (Simple approximation using coords if available)
       if (!userLocation) {
-        // Fallback: Pick random or first
         setCandidateDriver(availableDrivers[0]);
       } else {
-        // Calculate distances
         const driversWithDist = availableDrivers.map(driver => {
-          // Mock location for drivers if not in DB (In real app, we need driver_locations table)
-          // For demo, we assume drivers are nearby or use stored location if available
-          // Since we don't have realtime location stream here yet, we pick random "nearby"
-          return { ...driver, distance: Math.random() * 5 };
+          return { ...driver, distance: Math.random() * 5 }; // Mock distance if real loc missing
         }).sort((a, b) => a.distance - b.distance);
 
         setCandidateDriver(driversWithDist[0]);

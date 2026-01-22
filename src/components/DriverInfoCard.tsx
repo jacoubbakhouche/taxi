@@ -2,10 +2,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, MessageSquare, Car, ChevronRight, X, CheckSquare, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface DriverInfoCardProps {
   driver: {
+    id: string;
     full_name: string;
     phone: string;
     rating: number;
@@ -20,6 +22,7 @@ interface DriverInfoCardProps {
 }
 
 const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }: DriverInfoCardProps) => {
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
 
   const handleCall = () => {
@@ -40,7 +43,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
 
       {/* Handle Bar (Toggle) */}
       <div
-        className="w-full flex justify-center pb-4 pt-2 cursor-pointer hover:opacity-80 active:scale-95 transition-transform"
+        className="w-full flex justify-center py-5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform"
         onClick={handleToggle}
       >
         <div className="w-12 h-1.5 bg-gray-700 rounded-full opacity-50"></div>
@@ -87,9 +90,14 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
               <p className="text-gray-400 text-sm font-medium">{driver.car_model || "سيارة أجرة (Taxi)"}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Car className="w-14 h-8 text-white/80" />
-              <div className="bg-white/10 px-2 py-1 rounded text-[10px] font-mono tracking-widest border border-white/10">
-                {driver.license_plate || "00186.110.24"}
+              <Button variant="ghost" size="icon" onClick={handleToggle} className="-mr-2 -mt-2">
+                <ChevronDown className="w-6 h-6 text-gray-400" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Car className="w-10 h-6 text-white/80" />
+                <div className="bg-white/10 px-2 py-1 rounded text-[10px] font-mono tracking-widest border border-white/10">
+                  {driver.license_plate || "00186.110.24"}
+                </div>
               </div>
             </div>
           </div>
@@ -97,7 +105,10 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
           {/* Actions Row */}
           <div className="flex justify-evenly items-center px-4 mb-8">
             {/* Driver Profile */}
-            <div className="flex flex-col items-center gap-2 cursor-pointer group">
+            <div
+              className="flex flex-col items-center gap-2 cursor-pointer group"
+              onClick={() => navigate(`/customer/driver/${driver.id}`)}
+            >
               <div className="relative">
                 <Avatar className="w-16 h-16 border-2 border-white/10 group-hover:border-[#F5D848] transition-colors">
                   <AvatarImage src={driver.profile_image} className="object-cover" />
@@ -107,9 +118,14 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
                   <span>★</span> {driver.rating?.toFixed(1) || "5.0"}
                 </div>
               </div>
-              <span className="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">
-                {driver.full_name.split(' ')[0]}
-              </span>
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">
+                  {driver.full_name.split(' ')[0]}
+                </span>
+                <span className="text-[10px] text-gray-500 group-hover:text-gray-400 transition-colors">
+                  ({driver.total_rides || 0} رحلة)
+                </span>
+              </div>
             </div>
 
             {/* Contact */}
