@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, ChevronUp, ChevronDown } from "lucide-react";
-import CustomerInfoCard from "./CustomerInfoCard";
+import { MapPin, Navigation, Clock, Banknote, User } from "lucide-react";
 
 interface RideRequestCardProps {
   ride: {
@@ -38,151 +36,116 @@ const RideRequestCard = ({
   ride,
   customer,
   onAccept,
-  onInstantAccept,
   onReject,
-  onCustomerClick,
   loading,
-  isExpanded = true,
-  onToggleExpand
 }: RideRequestCardProps) => {
 
   return (
-    <Card className="bg-card/95 backdrop-blur-sm border-2 border-primary/20 animate-in fade-in slide-in-from-bottom-4 overflow-hidden">
-      {/* Collapsed View */}
-      {!isExpanded && (
-        <div className="p-4" dir="rtl">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {customer && (
-                <p className="font-bold text-sm truncate">{customer.full_name}</p>
-              )}
-              <p className="text-2xl font-bold text-primary">
-                💰 {Math.round(ride.price)} دج
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => onAccept(Math.round(ride.price))}
-                disabled={loading}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white font-bold"
-              >
-                قبول ({Math.round(ride.price)})
-              </Button>
-              <Button
-                onClick={onReject}
-                disabled={loading}
-                size="sm"
-                variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                ❌
-              </Button>
-            </div>
+    <div className="bg-[#1A1A1A] text-white rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 animate-in slide-in-from-bottom-full duration-500">
+
+      {/* Header Badge */}
+      <div className="flex justify-center -mt-2 mb-6">
+        <div className="h-1.5 w-12 bg-gray-700 rounded-full"></div>
+      </div>
+
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse">
+              NEW REQUEST
+            </span>
           </div>
-          {onToggleExpand && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleExpand}
-              className="w-full mt-2"
-            >
-              <ChevronUp className="w-4 h-4" />
-              عرض التفاصيل
-            </Button>
+          <h2 className="text-2xl font-bold text-white">
+            Someone needs a ride
+          </h2>
+        </div>
+        <div className="text-right">
+          <p className="text-3xl font-bold text-[#F5D848]">{Math.round(ride.price)} <span className="text-sm text-gray-400">DA</span></p>
+          <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">CASH TRIP</p>
+        </div>
+      </div>
+
+      {/* Customer Preview */}
+      <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-2xl border border-white/5">
+        <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10 flex items-center justify-center">
+          {customer?.profile_image ? (
+            <img src={customer.profile_image} className="w-full h-full object-cover" />
+          ) : (
+            <User className="text-gray-400" />
           )}
         </div>
-      )}
-
-      {/* Expanded View */}
-      {isExpanded && (
-        <div className="p-4 space-y-4" dir="rtl">
-          {onToggleExpand && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleExpand}
-              className="w-full"
-            >
-              <ChevronDown className="w-4 h-4" />
-              تصغير
-            </Button>
-          )}
-
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-lg">🚖 طلب جديد</h3>
-              <p className="text-sm text-muted-foreground">عميل قريب منك</p>
-            </div>
-          </div>
-
-          {customer && (
-            <CustomerInfoCard
-              customer={customer}
-              onClick={onCustomerClick}
-              showCallButton={true}
-            />
-          )}
-
-          <div className="space-y-2 bg-muted/50 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <Navigation className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">من</p>
-                <p className="text-sm font-medium">{ride.pickup_address}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">إلى</p>
-                <p className="text-sm font-medium">{ride.destination_address}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-3 border-2 border-primary/30">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-bold">سعر الرحلة</span>
-              <span className="text-xl font-bold text-primary">{Math.round(ride.price)} دج</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-xs text-muted-foreground">المسافة</p>
-              <p className="text-lg font-bold text-primary">{ride.distance?.toFixed(1)} كم</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-xs text-muted-foreground">المدة</p>
-              <p className="text-lg font-bold text-primary">{ride.duration?.toFixed(0)} دقيقة</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2 w-full">
-            <Button
-              onClick={() => onAccept(Math.round(ride.price))}
-              disabled={loading}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-lg h-12 shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all transform hover:scale-[1.02] border border-green-400/30"
-            >
-              ⚡ قبول الرحلة ({Math.round(ride.price)} دج)
-            </Button>
-            <Button
-              onClick={onReject}
-              disabled={loading}
-              variant="outline"
-              className="w-16 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-12"
-            >
-              ❌
-            </Button>
+        <div>
+          <h3 className="font-bold text-white text-lg">{customer?.full_name || "Passenger"}</h3>
+          <div className="flex items-center gap-1 text-xs text-yellow-500">
+            <span>★</span> {customer?.rating?.toFixed(1) || "5.0"} ({customer?.total_rides || 0} rides)
           </div>
         </div>
-      )}
-    </Card>
+      </div>
+
+      {/* Route Details */}
+      <div className="space-y-6 mb-8 relative">
+        {/* Connector Line */}
+        <div className="absolute top-3 bottom-8 right-[1.15rem] w-0.5 bg-gray-700 rounded-full" dir="rtl"></div>
+
+        <div className="flex items-start gap-4 relative z-10" dir="rtl">
+          <div className="mt-1">
+            <div className="w-3 h-3 rounded-full bg-[#3B82F6] shadow-[0_0_10px_#3B82F6]"></div>
+          </div>
+          <div className="flex-1 text-right">
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">PICKUP</p>
+            <p className="text-white font-medium text-lg leading-tight">{ride.pickup_address || "Current Location"}</p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-4 relative z-10" dir="rtl">
+          <div className="mt-1">
+            <div className="w-3 h-3 rounded-full bg-[#F5D848] shadow-[0_0_10px_#F5D848]"></div>
+          </div>
+          <div className="flex-1 text-right">
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">DROPOFF</p>
+            <p className="text-white font-medium text-lg leading-tight">{ride.destination_address || "Destination"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stat Badges */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center justify-center border border-white/5">
+          <div className="flex items-center gap-2 mb-1 text-gray-400">
+            <Navigation className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">Distance</span>
+          </div>
+          <span className="text-xl font-bold text-white">{ride.distance?.toFixed(1)} km</span>
+        </div>
+        <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center justify-center border border-white/5">
+          <div className="flex items-center gap-2 mb-1 text-gray-400">
+            <Clock className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">Time</span>
+          </div>
+          <span className="text-xl font-bold text-white">{ride.duration?.toFixed(0)} min</span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          onClick={onReject}
+          disabled={loading}
+          variant="secondary"
+          className="w-16 h-16 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10"
+        >
+          <span className="text-2xl">✕</span>
+        </Button>
+
+        <Button
+          onClick={() => onAccept(Math.round(ride.price))}
+          disabled={loading}
+          className="flex-1 h-16 rounded-2xl bg-[#F5D848] hover:bg-[#E5C838] text-black text-xl font-bold shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02]"
+        >
+          ACCEPT ({Math.round(ride.price)} DA)
+        </Button>
+      </div>
+    </div>
   );
 };
 
