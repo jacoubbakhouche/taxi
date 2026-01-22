@@ -307,29 +307,44 @@ const DriverProfile = () => {
                 />
               </div>
 
-              {/* Vehicle Type (Ownership) used above, here is Class */}
-              <div className="space-y-2 text-right">
-                <label className="text-white text-sm font-bold block mb-2 px-1">فئة السيارة</label>
-                <div className="flex gap-2 bg-white/10 p-1 rounded-xl">
-                  {['standard', 'comfort', 'luxury'].map((cls) => (
-                    <button
-                      key={cls}
-                      onClick={() => setEditVehicleClass(cls)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${editVehicleClass === cls
-                        ? 'bg-[#F5D848] text-black shadow-lg'
-                        : 'text-white hover:bg-white/10'
+              {/* Vehicle Class Selector with 3D Images */}
+              <div className="space-y-4 text-right">
+                <label className="text-white text-sm font-bold block px-1">اختر مركبتك (3D)</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'economy', label: 'اقتصادية', img: '/cars/economy.png' },
+                    { id: 'standard', label: 'عادية', img: '/cars/standard.png' },
+                    { id: 'taxi', label: 'طاكسي', img: '/cars/taxi.png' },
+                    { id: 'luxury', label: 'فاخرة', img: '/cars/luxury.png' },
+                    { id: 'suv', label: 'عائلية', img: '/cars/suv.png' },
+                  ].map((cls) => (
+                    <div
+                      key={cls.id}
+                      onClick={() => setEditVehicleClass(cls.id)}
+                      className={`relative overflow-hidden cursor-pointer rounded-xl border-2 transition-all duration-300 ${editVehicleClass === cls.id
+                          ? 'bg-[#F5D848]/20 border-[#F5D848] shadow-[0_0_20px_rgba(245,216,72,0.3)]'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
                         }`}
                     >
-                      {cls === 'standard' && 'اقتصادية'}
-                      {cls === 'comfort' && 'مريحة'}
-                      {cls === 'luxury' && 'فاخرة'}
-                    </button>
+                      <div className="p-2 z-10 relative">
+                        <span className={`text-xs font-bold ${editVehicleClass === cls.id ? 'text-[#F5D848]' : 'text-white'}`}>
+                          {cls.label}
+                        </span>
+                      </div>
+                      <div className="w-full h-24 flex items-center justify-center p-2">
+                        <img
+                          src={cls.img}
+                          alt={cls.label}
+                          className="w-full h-full object-contain drop-shadow-xl transform hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-2 text-right">
-                <label className="text-white text-sm font-bold block mb-2 px-1">نوع المركبة</label>
+                <label className="text-white text-sm font-bold block mb-2 px-1">نوع العمل</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'taxi_owner', label: 'مالك طاكسي', icon: '🚕', desc: 'سيارة صفراء (رخصة)' },
@@ -399,11 +414,39 @@ const DriverProfile = () => {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold mt-4">{profile.full_name}</h1>
+              {/* Profile View Mode */}
+
+              {/* 3D Car & Avatar Combo */}
+              <div className="relative mt-8 mb-6 h-32 flex items-end justify-center">
+                {/* Car Image (Largest) */}
+                {profile.vehicle_class && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 z-10 animate-in fade-in zoom-in duration-700">
+                    <img
+                      src={`/cars/${profile.vehicle_class}.png`}
+                      onError={(e) => e.currentTarget.src = '/cars/standard.png'}
+                      alt="Vehicle"
+                      className="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                    />
+                  </div>
+                )}
+
+                {/* Avatar (Floating Badge) */}
+                <div className="absolute -bottom-4 right-1/2 translate-x-16 z-20">
+                  <Avatar className="w-16 h-16 border-4 border-[#1A1A1A] shadow-xl">
+                    <AvatarImage src={profile.profile_image || undefined} className="object-cover" />
+                    <AvatarFallback className="bg-white text-black font-bold">
+                      {profile.full_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </div>
+
+              <h1 className="text-2xl font-bold mt-6 text-white text-center drop-shadow-md">{profile.full_name}</h1>
+
               <div className="flex items-center justify-center gap-2 mt-2">
                 {/* Display Vehicle Badge if exists */}
                 {profile.vehicle_type && (
-                  <span className="bg-[#F5D848] text-black px-2 py-0.5 rounded text-[10px] font-bold">
+                  <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-yellow-500/20">
                     {profile.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
                     {profile.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
                     {profile.vehicle_type === 'vtc' && '🚙 سائق خاص'}
