@@ -86,11 +86,31 @@ const DriverDashboard = () => {
     restoreActiveRide();
   }, [userId]);
 
-  useEffect(() => {
-    // Prevent busy drivers from getting new requests
-    if (!isOnline || !userId || !driverLocation || currentRide) return;
+  // Refs to avoid re-subscribing when these values change (especially location)
+  const driverLocationRef = useRef(driverLocation);
+  const ignoredRideIdsRef = useRef(ignoredRideIds);
+  const currentRideRef = useRef(currentRide); // Also ref currentRide to check inside callback without dep
 
-    // 1. Listen for NEW pending rides
+  useEffect(() => {
+    driverLocationRef.current = driverLocation;
+  }, [driverLocation]);
+
+  useEffect(() => {
+    ignoredRideIdsRef.current = ignoredRideIds;
+  }, [ignoredRideIds]);
+
+  useEffect(() => {
+    currentRideRef.current = currentRide;
+  }, [currentRide]);
+
+  useEffect(() => {
+    // We only subscribe if online and logged in.
+    // We do NOT include driverLocation/currentRide/ignoredIds in dependency array
+    // because that would cause disconnect/reconnect loops.
+    if (!isOnline || !userId) return;
+
+    console.log("Starting Realtime Subscription...");
+
     const channel = supabase
       .channel('pending-rides')
       .on(
@@ -103,7 +123,13 @@ const DriverDashboard = () => {
         },
         async (payload) => {
           const ride = payload.new as Ride;
-          console.log('New ride request:', ride);
+          console.log('New ride request received:', ride);
+
+          // Check busy status via Ref
+          if (currentRideRef.current) {
+            console.log("Driver is busy, ignoring request.");
+            return;
+          }
 
           // If ride is assigned to a specific driver, ignore if it's not ME.
           if (ride.driver_id && ride.driver_id !== userId) {
@@ -111,20 +137,25 @@ const DriverDashboard = () => {
             return;
           }
 
-          // Check if we locally ignored this ride
-          if (ignoredRideIds.includes(ride.id)) {
+          // Check if ignored via Ref
+          if (ignoredRideIdsRef.current.includes(ride.id)) {
             console.log('Ignoring previously rejected ride');
             return;
           }
 
+          // Calculate distance using Ref
+          const location = driverLocationRef.current;
           const distance = calculateDistance(
-            driverLocation[0],
-            driverLocation[1],
+            location[0],
+            location[1],
             ride.pickup_lat,
             ride.pickup_lng
           );
 
-          if (distance <= 5) {
+          console.log(`Ride distance: ${distance} km`);
+
+          // Broadened range slightly or keep as is
+          if (distance <= 10) {
             setPendingRide(ride);
 
             // Fetch customer info
@@ -151,12 +182,15 @@ const DriverDashboard = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
+      console.log("Cleaning up subscription...");
       supabase.removeChannel(channel);
     };
-  }, [isOnline, userId, driverLocation, currentRide, ignoredRideIds]);
+  }, [isOnline, userId]); // Stable dependencies only
 
   // 2. NEW: Listen for updates/delete to the CURRENT pending ride
   useEffect(() => {
@@ -624,8 +658,14 @@ const DriverDashboard = () => {
         final_price: price
       });
 
+      // Set locations for the map to render
+      setCustomerLocation([pendingRide.pickup_lat, pendingRide.pickup_lng]);
+      setDestinationLocation([pendingRide.destination_lat, pendingRide.destination_lng]);
+
+      // Do NOT clear customerInfo - we need it for the accepted ride UI!
+      // setCustomerInfo(null); 
+
       setPendingRide(null);
-      setCustomerInfo(null);
       setIsSheetExpanded(false);
 
       toast({
