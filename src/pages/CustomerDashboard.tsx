@@ -102,13 +102,25 @@ const CustomerDashboard = () => {
           setRideStatus(activeRide.status as any);
 
           // Restore map data
-          if (activeRide.destination_lat && activeRide.destination_lng) {
+          if (
+            activeRide.destination_lat != null &&
+            activeRide.destination_lng != null
+          ) {
             setDestination([activeRide.destination_lat, activeRide.destination_lng]);
-            setRoute([[activeRide.pickup_lat, activeRide.pickup_lng], [activeRide.destination_lat, activeRide.destination_lng]]);
             setSearchQuery(activeRide.destination_address || "الوجهة");
             setPrice(activeRide.price);
             setDistance(activeRide.distance);
             setDuration(activeRide.duration);
+
+            if (
+              activeRide.pickup_lat != null &&
+              activeRide.pickup_lng != null
+            ) {
+              setRoute([
+                [activeRide.pickup_lat, activeRide.pickup_lng],
+                [activeRide.destination_lat, activeRide.destination_lng]
+              ]);
+            }
           }
 
           // Restore driver if exists
