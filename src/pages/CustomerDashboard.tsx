@@ -602,20 +602,40 @@ const CustomerDashboard = () => {
       )}
 
       {/* --- Pending State --- */}
+      {/* --- Pending State (Radar Effect) --- */}
       {rideStatus === 'pending' && (
-        <div className="absolute inset-0 z-[2000] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white p-8 text-center space-y-6">
-          <Loader2 className="w-16 h-16 animate-spin text-primary" />
-          <div>
-            <h2 className="text-2xl font-bold">جاري انتظار السائق...</h2>
-            <p className="opacity-70">يرجى الانتظار حتى يقبل السائق طلبك</p>
+        <div className="absolute inset-0 z-[2000] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-10 animate-in fade-in duration-500">
+
+          {/* Radar Animation */}
+          <div className="relative flex items-center justify-center">
+            {/* Pulsing Circles */}
+            <div className="absolute w-64 h-64 bg-[#84cc16]/20 rounded-full animate-ping opacity-20 duration-[3s]"></div>
+            <div className="absolute w-48 h-48 bg-[#84cc16]/10 rounded-full animate-pulse delay-700"></div>
+            <div className="absolute w-32 h-32 border border-[#84cc16]/30 rounded-full"></div>
+
+            {/* Center Icon */}
+            <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
+              <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
+              <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <Button variant="outline" className="rounded-full px-6 text-black" onClick={() => window.location.reload()}>
-              تحديث
-            </Button>
-            <Button variant="destructive" onClick={handleCancelRide} className="rounded-full px-6">
+
+          <div className="space-y-2 z-10">
+            <h2 className="text-3xl font-bold text-white tracking-tight">جاري البحث عن كابتن...</h2>
+            <p className="text-gray-400 text-sm">يتم الآن إبلاغ السائقين القريبين بطلبك</p>
+          </div>
+
+          <div className="z-10 w-full max-w-xs px-6">
+            <Button
+              variant="destructive"
+              onClick={handleCancelRide}
+              className="w-full h-14 text-lg rounded-2xl shadow-lg border border-red-500/20 hover:bg-red-600/90 transition-all font-bold"
+            >
               إلغاء الطلب
             </Button>
+            <p className="mt-4 text-xs text-center text-gray-500">
+              سيتم نقلك تلقائياً عند قبول الطلب
+            </p>
           </div>
         </div>
       )}
