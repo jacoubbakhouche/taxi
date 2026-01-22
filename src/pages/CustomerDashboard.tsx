@@ -376,6 +376,19 @@ const CustomerDashboard = () => {
     resetState();
   };
 
+  const handleEndRide = async () => {
+    if (!currentRideId) return;
+    try {
+      const { error } = await supabase.from('rides').update({ status: 'completed' }).eq('id', currentRideId);
+      if (error) throw error;
+      setRideStatus('completed');
+      setShowRating(true);
+    } catch (e) {
+      console.error("Failed to end ride", e);
+      toast({ title: "Error", description: "Failed to end ride. Ensure you have permission.", variant: "destructive" });
+    }
+  };
+
   const handleSearch = async () => {
     if (!searchQuery) return;
     try {
@@ -551,7 +564,7 @@ const CustomerDashboard = () => {
           driver={driverInfo}
           rideStatus={rideStatus}
           onCancel={handleCancelRide}
-        // onEndRide excluded for customer
+          onEndRide={handleEndRide}
         />
       )}
 
