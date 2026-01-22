@@ -1007,6 +1007,38 @@ const DriverDashboard = () => {
             </div>
           </div>
 
+          {/* Trip Progress Stats */}
+          <div className="flex justify-between items-center mb-2 px-2">
+            <div>
+              <span className="text-2xl font-bold text-white">1.3</span> <span className="text-xs text-gray-500">km</span>
+            </div>
+            <div className="text-gray-600">
+              •
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-white">2</span> <span className="text-xs text-gray-500">min</span>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="relative h-2 bg-gray-800 rounded-full mb-6 mx-2">
+            <div className="absolute top-0 left-0 bottom-0 bg-[#84cc16] w-2/3 rounded-full shadow-[0_0_10px_#84cc16]"></div>
+            <div className="absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16]">
+              <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
+            </div>
+          </div>
+
+          {/* Arrival Time */}
+          <div className="flex items-center gap-3 mb-6 px-2">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+              <Car className="w-5 h-5 text-[#F5D848]" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">03:36 PM</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider">ESTIMATED ARRIVAL</p>
+            </div>
+          </div>
+
           {/* Complete Button */}
           <Button
             size="lg"
