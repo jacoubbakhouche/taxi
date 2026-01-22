@@ -31,6 +31,7 @@ const CustomerDashboard = () => {
   // --- Ride State ---
   const [rideStatus, setRideStatus] = useState<"idle" | "searching" | "pending" | "accepted" | "in_progress" | "completed">("idle");
   const [currentRideId, setCurrentRideId] = useState<string | null>(null);
+  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
 
   // --- Ride Details ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,6 +189,33 @@ const CustomerDashboard = () => {
       supabase.removeChannel(channel);
     };
   }, [currentRideId]);
+
+  // Phantom Cars Polling
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const fetchDrivers = async () => {
+      const { data } = await supabase.rpc('get_nearby_drivers', {
+        p_lat: userLocation[0],
+        p_lng: userLocation[1],
+        p_radius_meters: 5000
+      });
+
+      if (data) {
+        setNearbyDrivers(data.map((d: any) => ({
+          position: [d.lat, d.lng],
+          rotation: d.heading,
+          icon: 'car',
+          popup: "سائق متاح"
+        })));
+      }
+    };
+
+    fetchDrivers(); // Initial fetch
+    const interval = setInterval(fetchDrivers, 10000); // Poll every 10s
+
+    return () => clearInterval(interval);
+  }, [userLocation]);
 
   // Driver Location Subscription
   useEffect(() => {
@@ -430,6 +458,12 @@ const CustomerDashboard = () => {
     if (userLocation) markers.push({ position: userLocation, icon: "🧍", popup: "أنا" });
     if (destination) markers.push({ position: destination, icon: "📍", popup: "الوجهة" });
     if (driverLocation) markers.push({ position: driverLocation, icon: "🚗", popup: "السائق" });
+
+    // Add Phantom Cars
+    if (rideStatus === 'idle' || rideStatus === 'searching') {
+      markers.push(...nearbyDrivers);
+    }
+
     return markers;
   };
 
