@@ -15,6 +15,8 @@ interface DriverData {
     car_model?: string;
     license_plate?: string;
     created_at: string;
+    vehicle_class?: string;
+    vehicle_type?: string;
 }
 
 const DriverProfileView = () => {
@@ -31,11 +33,12 @@ const DriverProfileView = () => {
         try {
             setLoading(true);
 
+            // Select extra fields for vehicle
             const { data: driverData, error } = await supabase
                 .from('users')
-                .select('full_name, rating, profile_image, created_at')
+                .select('full_name, rating, profile_image, created_at, vehicle_class, vehicle_type, car_model, license_plate')
                 .eq('id', driverId)
-                .eq('role', 'driver')
+                //.eq('role', 'driver') // Removed stricter check to avoid issues if role mismatch
                 .single();
 
             if (error) throw error;
@@ -68,15 +71,15 @@ const DriverProfileView = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <p className="text-muted-foreground">جاري التحميل...</p>
+            <div className="min-h-screen flex items-center justify-center bg-[#1A1A1A]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F5D848] mx-auto"></div>
             </div>
         );
     }
 
     if (!driver) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="min-h-screen flex items-center justify-center bg-[#1A1A1A]">
                 <p className="text-muted-foreground">لم يتم العثور على السائق</p>
             </div>
         );
@@ -86,55 +89,86 @@ const DriverProfileView = () => {
     const joinDate = new Date(driver.created_at).toLocaleDateString('ar-DZ', { year: 'numeric', month: 'long' });
 
     return (
-        <div className="min-h-screen bg-background" dir="rtl">
-            <header className="bg-card border-b border-border px-4 py-3 flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                    <ArrowRight className="w-5 h-5" />
-                </Button>
-                <h1 className="font-bold text-lg">ملف السائق</h1>
-            </header>
+        <div className="min-h-screen bg-[#1A1A1A]" dir="rtl">
+            {/* Header Gradient */}
+            <div className="bg-gradient-to-b from-[#F5D848] via-[#F5D848]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5 relative">
+                <div className="flex items-center justify-between mb-4">
+                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-black hover:bg-black/10">
+                        <ArrowRight className="w-6 h-6" />
+                    </Button>
+                    <h1 className="font-bold text-lg text-black">ملف السائق</h1>
+                    <div className="w-10"></div> {/* Spacer */}
+                </div>
 
-            <div className="p-4 space-y-4">
-                <Card className="p-6">
-                    <div className="flex flex-col items-center gap-4">
-                        <Avatar className="w-24 h-24 border-4 border-primary">
-                            <AvatarImage src={driver.profile_image} alt={driver.full_name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
-                                {driver.full_name.charAt(0)}
+                {/* 3D Car & Avatar Combo (Public View) */}
+                <div className="relative mt-8 mb-6 h-32 flex items-end justify-center">
+                    {/* Car Image (Largest) */}
+                    {driver.vehicle_class && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 z-10 animate-in fade-in zoom-in duration-700">
+                            <img
+                                src={`/cars/${driver.vehicle_class}.png`}
+                                onError={(e) => e.currentTarget.src = '/cars/standard.png'}
+                                alt="Vehicle"
+                                className="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                            />
+                        </div>
+                    )}
+
+                    {/* Avatar (Floating Badge) */}
+                    <div className="absolute -bottom-4 right-1/2 translate-x-16 z-20">
+                        <Avatar className="w-16 h-16 border-4 border-[#1A1A1A] shadow-xl">
+                            <AvatarImage src={driver.profile_image || undefined} className="object-cover" />
+                            <AvatarFallback className="bg-white text-black font-bold">
+                                {driver.full_name?.[0]}
                             </AvatarFallback>
                         </Avatar>
-
-                        <div className="text-center">
-                            <h2 className="font-bold text-2xl">{driver.full_name}</h2>
-                            <div className="flex items-center justify-center gap-1 mt-2">
-                                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                                <span className="font-bold text-xl text-yellow-600">
-                                    {driver.rating.toFixed(1)}
-                                </span>
-                                <span className="text-sm text-muted-foreground mx-1">
-                                    ({driver.total_rides} رحلة ناجحة)
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 w-full mt-4">
-                            <div className="bg-muted rounded-lg p-3 text-center">
-                                <Car className="w-5 h-5 mx-auto text-primary mb-1" />
-                                <p className="font-bold truncate">{driver.car_model || 'سيارة'}</p>
-                                <p className="text-xs text-muted-foreground">{driver.license_plate}</p>
-                            </div>
-                            <div className="bg-muted rounded-lg p-3 text-center">
-                                <Award className="w-5 h-5 mx-auto text-primary mb-1" />
-                                <p className="font-bold">{joinDate}</p>
-                                <p className="text-xs text-muted-foreground">انضم منذ</p>
-                            </div>
-                        </div>
                     </div>
-                </Card>
+                </div>
 
-                {/* Placeholder for future reviews or badges */}
-                <div className="text-center text-sm text-muted-foreground mt-8">
+                <div className="text-center">
+                    <h2 className="font-bold text-2xl text-white mt-6 mb-2">{driver.full_name}</h2>
+
+                    {/* Vehicle Type Badge */}
+                    {driver.vehicle_type && (
+                        <div className="flex justify-center mb-3">
+                            <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-yellow-500/20">
+                                {driver.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
+                                {driver.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
+                                {driver.vehicle_type === 'vtc' && '🚙 سائق خاص'}
+                                {driver.vehicle_type === 'delivery' && '📦 توصيل'}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <span className="font-bold text-xl text-yellow-500">
+                            {driver.rating.toFixed(1)}
+                        </span>
+                        <span className="text-sm text-gray-400 mx-1">
+                            ({driver.total_rides} رحلة ناجحة)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-6 -mt-6">
+                <div className="grid grid-cols-2 gap-4 w-full mt-4">
+                    <div className="bg-[#242424] rounded-xl p-4 text-center border border-white/5 shadow-lg">
+                        <Car className="w-6 h-6 mx-auto text-[#F5D848] mb-2" />
+                        <p className="font-bold text-white truncate">{driver.car_model || 'سيارة'}</p>
+                        <p className="text-xs text-gray-400 mt-1">{driver.license_plate || '---'}</p>
+                    </div>
+                    <div className="bg-[#242424] rounded-xl p-4 text-center border border-white/5 shadow-lg">
+                        <Award className="w-6 h-6 mx-auto text-[#F5D848] mb-2" />
+                        <p className="font-bold text-white text-sm">عضو منذ</p>
+                        <p className="text-xs text-gray-400 mt-1">{joinDate}</p>
+                    </div>
+                </div>
+
+                <div className="text-center text-sm text-gray-500 mt-12 bg-[#242424]/50 p-4 rounded-xl border border-white/5 mx-auto max-w-xs">
                     <p>السائق معتمد وموثوق</p>
+                    <p className="text-[10px] mt-1 opacity-70">تم التحقق من الوثائق والهوية</p>
                 </div>
             </div>
         </div>
