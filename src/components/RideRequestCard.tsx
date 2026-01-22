@@ -41,7 +41,7 @@ const RideRequestCard = ({
 }: RideRequestCardProps) => {
 
   return (
-    <div className="bg-[#1A1A1A] text-white rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 animate-in slide-in-from-bottom-full duration-500">
+    <div className="fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 animate-in slide-in-from-bottom-full duration-500">
 
       {/* Header Badge */}
       <div className="flex justify-center -mt-2 mb-6">
