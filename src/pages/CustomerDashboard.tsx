@@ -554,7 +554,14 @@ const CustomerDashboard = () => {
             <h2 className="text-2xl font-bold">جاري انتظار السائق...</h2>
             <p className="opacity-70">يرجى الانتظار حتى يقبل السائق طلبك</p>
           </div>
-          <Button variant="destructive" onClick={handleCancelRide} className="rounded-full px-8">إلغاء الطلب</Button>
+          <div className="flex gap-4">
+            <Button variant="outline" className="rounded-full px-6 text-black" onClick={() => window.location.reload()}>
+              تحديث
+            </Button>
+            <Button variant="destructive" onClick={handleCancelRide} className="rounded-full px-6">
+              إلغاء الطلب
+            </Button>
+          </div>
         </div>
       )}
 
