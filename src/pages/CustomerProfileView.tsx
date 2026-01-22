@@ -116,7 +116,7 @@ const CustomerProfileView = () => {
             <div className="text-center">
               <h2 className="font-bold text-2xl">{customer.full_name}</h2>
               <div className="flex items-center justify-center gap-1 mt-2">
-                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-lime-500 text-lime-500" />
                 <span className="font-bold text-xl text-yellow-600">
                   {customer.rating.toFixed(1)}
                 </span>
@@ -171,7 +171,7 @@ const CustomerProfileView = () => {
                       <p className="font-bold text-primary">{ride.price.toFixed(2)} ريال</p>
                       {ride.rating && (
                         <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <Star className="w-3 h-3 fill-lime-500 text-lime-500" />
                           <span className="text-sm">{ride.rating}</span>
                         </div>
                       )}

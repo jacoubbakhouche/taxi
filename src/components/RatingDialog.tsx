@@ -48,7 +48,7 @@ const RatingDialog = ({ open, onOpenChange, onSubmit, name, role }: RatingDialog
               >
                 <Star
                   className={`w-10 h-10 ${star <= (hoveredRating || rating)
-                      ? "fill-yellow-400 text-yellow-400"
+                      ? "fill-lime-500 text-lime-500"
                       : "text-gray-300"
                     }`}
                 />

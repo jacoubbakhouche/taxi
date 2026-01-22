@@ -208,7 +208,7 @@ const DriverProfile = () => {
         <p className="text-xs text-muted-foreground">{formatDate(ride.created_at)}</p>
         {ride.rating && (
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <Star className="w-4 h-4 fill-lime-500 text-lime-500" />
             <span className="text-sm font-medium">{ride.rating}</span>
           </div>
         )}
@@ -234,7 +234,7 @@ const DriverProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#F5D848] via-[#F5D848]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
+      <div className="bg-gradient-to-b from-[#84cc16] via-[#84cc16]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
@@ -322,12 +322,12 @@ const DriverProfile = () => {
                       key={cls.id}
                       onClick={() => setEditVehicleClass(cls.id)}
                       className={`relative overflow-hidden cursor-pointer rounded-xl border-2 transition-all duration-300 ${editVehicleClass === cls.id
-                          ? 'bg-[#F5D848]/20 border-[#F5D848] shadow-[0_0_20px_rgba(245,216,72,0.3)]'
+                          ? 'bg-[#84cc16]/20 border-[#84cc16] shadow-[0_0_20px_rgba(245,216,72,0.3)]'
                           : 'bg-white/5 border-white/10 hover:bg-white/10'
                         }`}
                     >
                       <div className="p-2 z-10 relative">
-                        <span className={`text-xs font-bold ${editVehicleClass === cls.id ? 'text-[#F5D848]' : 'text-white'}`}>
+                        <span className={`text-xs font-bold ${editVehicleClass === cls.id ? 'text-[#84cc16]' : 'text-white'}`}>
                           {cls.label}
                         </span>
                       </div>
@@ -356,7 +356,7 @@ const DriverProfile = () => {
                       key={type.id}
                       onClick={() => setEditVehicleType(type.id)}
                       className={`cursor-pointer rounded-xl p-3 border-2 transition-all ${editVehicleType === type.id
-                        ? 'bg-[#F5D848] border-[#F5D848] text-black'
+                        ? 'bg-[#84cc16] border-[#84cc16] text-black'
                         : 'bg-white/10 border-white/10 text-white hover:bg-white/20'
                         }`}
                     >
@@ -374,7 +374,7 @@ const DriverProfile = () => {
                 <Button
                   type="button"
                   variant="secondary"
-                  className="w-full bg-[#F5D848] text-black hover:bg-[#F5D848]/90"
+                  className="w-full bg-[#84cc16] text-black hover:bg-[#84cc16]/90"
                   onClick={() => document.getElementById('driver-file-upload')?.click()}
                   disabled={loading}
                 >
@@ -446,7 +446,7 @@ const DriverProfile = () => {
               <div className="flex items-center justify-center gap-2 mt-2">
                 {/* Display Vehicle Badge if exists */}
                 {profile.vehicle_type && (
-                  <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-yellow-500/20">
+                  <span className="bg-[#84cc16] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-lime-500/20">
                     {profile.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
                     {profile.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
                     {profile.vehicle_type === 'vtc' && '🚙 سائق خاص'}

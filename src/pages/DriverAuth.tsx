@@ -93,7 +93,7 @@ const DriverAuth = () => {
     <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
 
       {/* Background Ambience */}
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#F5D848]/5 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#84cc16]/5 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
       <Card className="w-full max-w-md bg-[#1A1A1A] border border-[#333] shadow-2xl p-8 space-y-8 relative z-10 animate-in fade-in zoom-in duration-500">
 
@@ -111,7 +111,7 @@ const DriverAuth = () => {
           </div>
 
           <div className="w-20 h-20 rounded-2xl bg-[#222] border border-[#333] flex items-center justify-center shadow-lg mb-2">
-            <Car className="w-10 h-10 text-[#F5D848]" />
+            <Car className="w-10 h-10 text-[#84cc16]" />
           </div>
 
           <div className="text-center space-y-1">
@@ -135,7 +135,7 @@ const DriverAuth = () => {
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
-                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#F5D848] focus:ring-1 focus:ring-[#F5D848] h-12 rounded-xl transition-all"
+                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
                 dir="auto"
               />
             </div>
@@ -150,7 +150,7 @@ const DriverAuth = () => {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#F5D848] focus:ring-1 focus:ring-[#F5D848] h-12 rounded-xl transition-all"
+              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
             />
           </div>
 
@@ -164,7 +164,7 @@ const DriverAuth = () => {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#F5D848] focus:ring-1 focus:ring-[#F5D848] h-12 rounded-xl transition-all"
+                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
                 dir="ltr"
               />
             </div>
@@ -179,14 +179,14 @@ const DriverAuth = () => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
-              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#F5D848] focus:ring-1 focus:ring-[#F5D848] h-12 rounded-xl transition-all"
+              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
             />
           </div>
 
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-[#F5D848] hover:bg-[#FCC419] text-black font-bold text-lg rounded-xl shadow-[0_4px_20px_rgba(245,216,72,0.2)] hover:shadow-[0_4px_25px_rgba(245,216,72,0.4)] transition-all duration-300"
+            className="w-full h-12 bg-[#84cc16] hover:bg-[#FCC419] text-black font-bold text-lg rounded-xl shadow-[0_4px_20px_rgba(245,216,72,0.2)] hover:shadow-[0_4px_25px_rgba(245,216,72,0.4)] transition-all duration-300"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -202,7 +202,7 @@ const DriverAuth = () => {
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-[#F5D848] font-semibold hover:underline transition-all"
+              className="text-[#84cc16] font-semibold hover:underline transition-all"
             >
               {isLogin ? "Sign Up" : "Log In"}
             </button>

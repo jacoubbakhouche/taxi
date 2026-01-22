@@ -66,12 +66,12 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
             </h2>
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-white text-base font-medium">
-                <Car className="w-5 h-5 text-[#F5D848]" />
+                <Car className="w-5 h-5 text-[#84cc16]" />
                 <span>{driver.car_model || "سيارة أجرة"}</span>
                 <span className="text-gray-400 text-sm">({driver.vehicle_color || "Yellow"})</span>
               </div>
               {driver.vehicle_class && (
-                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded w-fit ${driver.vehicle_class === 'luxury' ? 'bg-[#F5D848] text-black' :
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded w-fit ${driver.vehicle_class === 'luxury' ? 'bg-[#84cc16] text-black' :
                   driver.vehicle_class === 'comfort' ? 'bg-blue-500 text-white' :
                     'bg-gray-700 text-gray-300'
                   }`}>
@@ -81,7 +81,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <div className="bg-[#F5D848] text-black px-3 py-1 rounded-lg text-sm font-bold tracking-widest border border-yellow-500/20 shadow-lg shadow-yellow-500/10">
+            <div className="bg-[#84cc16] text-black px-3 py-1 rounded-lg text-sm font-bold tracking-widest border border-lime-500/20 shadow-lg shadow-lime-500/10">
               {driver.license_plate || "TAXI"}
             </div>
             <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">License Plate</span>
@@ -96,7 +96,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
             onClick={(e) => { e.stopPropagation(); navigate(`/customer/driver/${driver.id}`); }}
           >
             <div className="relative">
-              <Avatar className="w-16 h-16 border-2 border-white/10 group-hover:border-[#F5D848] transition-all duration-300">
+              <Avatar className="w-16 h-16 border-2 border-white/10 group-hover:border-[#84cc16] transition-all duration-300">
                 <AvatarImage src={driver.profile_image} className="object-cover" />
                 <AvatarFallback className="bg-gray-800 text-lg">{driver.full_name[0]}</AvatarFallback>
               </Avatar>

@@ -87,7 +87,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             {/* Slider */}
             <div
                 ref={sliderRef}
-                className="absolute left-1 top-1 bottom-1 w-14 h-14 bg-[#F5D848] rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-transform duration-75 ease-out"
+                className="absolute left-1 top-1 bottom-1 w-14 h-14 bg-[#84cc16] rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10 transition-transform duration-75 ease-out"
                 style={{ transform: `translateX(${currentX}px)` }}
                 onMouseDown={onMouseDown}
                 onTouchStart={onTouchStart}
@@ -98,7 +98,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             {/* Success State Overlay */}
             <div
                 className={cn(
-                    "absolute inset-0 bg-[#F5D848] flex items-center justify-center transition-opacity duration-300 pointer-events-none z-0",
+                    "absolute inset-0 bg-[#84cc16] flex items-center justify-center transition-opacity duration-300 pointer-events-none z-0",
                     completed ? "opacity-100" : "opacity-0"
                 )}
             >

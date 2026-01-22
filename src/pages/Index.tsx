@@ -16,7 +16,7 @@ const Index = () => {
     <div className="min-h-screen bg-[#111111] text-white flex flex-col items-center justify-between p-6 overflow-hidden relative font-sans">
 
       {/* Background Ambience */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#F5D848]/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 -z-0 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#84cc16]/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 -z-0 pointer-events-none" />
 
       {/* Top Section: Header/Logo (Simulated App Bar) */}
       <div className="w-full pt-4 z-10 flex justify-between items-center opacity-80">
@@ -29,7 +29,7 @@ const Index = () => {
 
         {/* Comic Style Taxi */}
         <div className="relative w-full mb-8">
-          <div className="absolute inset-0 bg-yellow-500/10 blur-2xl transform scale-90 translate-y-4 rounded-full" />
+          <div className="absolute inset-0 bg-lime-500/10 blur-2xl transform scale-90 translate-y-4 rounded-full" />
           <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/5">
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-20 pointer-events-none" />
             <img
@@ -43,7 +43,7 @@ const Index = () => {
         {/* Text Content */}
         <div className="w-full text-left space-y-4 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-300">
           <div className="space-y-1">
-            <h2 className="text-[#F5D848] text-sm font-bold tracking-widest uppercase mb-2">RAMEEGO FOR DRIVERS</h2>
+            <h2 className="text-[#84cc16] text-sm font-bold tracking-widest uppercase mb-2">RAMEEGO FOR DRIVERS</h2>
             <h1 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight text-white">
               Welcome to your <br />
               journey to success <br />

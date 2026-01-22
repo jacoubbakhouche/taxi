@@ -542,7 +542,7 @@ const CustomerDashboard = () => {
                 className="text-right bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl h-12"
                 dir="rtl"
               />
-              <Button size="icon" className="h-12 w-12 rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90" onClick={handleSearch}>
+              <Button size="icon" className="h-12 w-12 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90" onClick={handleSearch}>
                 <Search className="w-5 h-5" />
               </Button>
             </div>
@@ -556,14 +556,14 @@ const CustomerDashboard = () => {
                     <span>{distance.toFixed(1)} km • {duration.toFixed(0)} min</span>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="text-[#F5D848] hover:text-[#F5D848]/80 hover:bg-white/5" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
+                <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
                   تغيير الوجهة
                 </Button>
               </div>
 
               <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5">
                 <div className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-white/10">
-                  <MapPin className="text-[#F5D848]" />
+                  <MapPin className="text-[#84cc16]" />
                 </div>
                 <div className="text-right flex-1">
                   <p className="text-xs text-gray-500">الوجهة</p>
@@ -571,7 +571,7 @@ const CustomerDashboard = () => {
                 </div>
               </div>
 
-              <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90 shadow-lg shadow-[#F5D848]/10" onClick={handleRequestRide}>
+              <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-[#84cc16]/10" onClick={handleRequestRide}>
                 {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : "بحث عن سائق 🚖"}
               </Button>
             </div>

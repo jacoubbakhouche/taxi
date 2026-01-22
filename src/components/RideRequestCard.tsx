@@ -51,7 +51,7 @@ const RideRequestCard = ({
       <div className="flex justify-between items-start mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse">
+            <span className="bg-[#84cc16] text-black px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider animate-pulse">
               NEW REQUEST
             </span>
           </div>
@@ -60,7 +60,7 @@ const RideRequestCard = ({
           </h2>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold text-[#F5D848]">{Math.round(ride.price)} <span className="text-sm text-gray-400">DA</span></p>
+          <p className="text-3xl font-bold text-[#84cc16]">{Math.round(ride.price)} <span className="text-sm text-gray-400">DA</span></p>
           <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">CASH TRIP</p>
         </div>
       </div>
@@ -76,7 +76,7 @@ const RideRequestCard = ({
         </div>
         <div>
           <h3 className="font-bold text-white text-lg">{customer?.full_name || "Passenger"}</h3>
-          <div className="flex items-center gap-1 text-xs text-yellow-500">
+          <div className="flex items-center gap-1 text-xs text-lime-500">
             <span>★</span> {customer?.rating?.toFixed(1) || "5.0"} ({customer?.total_rides || 0} rides)
           </div>
         </div>
@@ -99,7 +99,7 @@ const RideRequestCard = ({
 
         <div className="flex items-start gap-4 relative z-10" dir="rtl">
           <div className="mt-1">
-            <div className="w-3 h-3 rounded-full bg-[#F5D848] shadow-[0_0_10px_#F5D848]"></div>
+            <div className="w-3 h-3 rounded-full bg-[#84cc16] shadow-[0_0_10px_#84cc16]"></div>
           </div>
           <div className="flex-1 text-right">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">DROPOFF</p>
@@ -140,7 +140,7 @@ const RideRequestCard = ({
         <Button
           onClick={() => onAccept(Math.round(ride.price))}
           disabled={loading}
-          className="flex-1 h-16 rounded-2xl bg-[#F5D848] hover:bg-[#E5C838] text-black text-xl font-bold shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02]"
+          className="flex-1 h-16 rounded-2xl bg-[#84cc16] hover:bg-[#E5C838] text-black text-xl font-bold shadow-[0_0_20px_rgba(245,216,72,0.3)] transition-all hover:scale-[1.02]"
         >
           ACCEPT ({Math.round(ride.price)} DA)
         </Button>

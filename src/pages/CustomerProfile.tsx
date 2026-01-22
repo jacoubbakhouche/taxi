@@ -181,7 +181,7 @@ const CustomerProfile = () => {
         <p className="text-xs text-muted-foreground">{formatDate(ride.created_at)}</p>
         {ride.rating && (
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <Star className="w-4 h-4 fill-lime-500 text-lime-500" />
             <span className="text-sm font-medium">{ride.rating}</span>
           </div>
         )}
@@ -205,7 +205,7 @@ const CustomerProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#F5D848] via-[#F5D848]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
+      <div className="bg-gradient-to-b from-[#84cc16] via-[#84cc16]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
@@ -266,7 +266,7 @@ const CustomerProfile = () => {
                 <Button
                   type="button"
                   variant="secondary"
-                  className="w-full bg-[#F5D848] text-black hover:bg-[#F5D848]/90"
+                  className="w-full bg-[#84cc16] text-black hover:bg-[#84cc16]/90"
                   onClick={() => document.getElementById('file-upload')?.click()}
                   disabled={loading}
                 >

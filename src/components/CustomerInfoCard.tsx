@@ -39,8 +39,8 @@ const CustomerInfoCard = ({ customer, onClick, showCallButton = false }: Custome
         <div className="flex flex-col">
           <h3 className="font-bold text-base text-foreground">{customer.full_name}</h3>
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span className="font-bold text-yellow-500">{customer.rating.toFixed(1)}</span>
+            <Star className="w-4 h-4 fill-lime-500 text-lime-500" />
+            <span className="font-bold text-lime-500">{customer.rating.toFixed(1)}</span>
             <span className="text-muted-foreground text-sm">– {customer.total_rides} رحلة</span>
           </div>
         </div>

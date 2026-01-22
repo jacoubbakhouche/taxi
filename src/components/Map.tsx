@@ -77,7 +77,7 @@ function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
         if (marker.icon === "🚗" || marker.icon === "car") {
           iconHtml = renderToStaticMarkup(
             <div
-              className="relative flex items-center justify-center w-10 h-10 bg-[#F5D848] rounded-full shadow-[0_0_15px_rgba(245,216,72,0.5)] border-2 border-white transition-transform duration-500 will-change-transform"
+              className="relative flex items-center justify-center w-10 h-10 bg-[#84cc16] rounded-full shadow-[0_0_15px_rgba(245,216,72,0.5)] border-2 border-white transition-transform duration-500 will-change-transform"
               style={{ transform: `rotate(${marker.rotation || 0}deg)` }}
             >
               <Car className="w-5 h-5 text-black fill-black" />
@@ -93,7 +93,7 @@ function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
         } else if (marker.icon === "📍" || marker.icon === "pin") {
           iconHtml = renderToStaticMarkup(
             <div className="relative flex items-center justify-center">
-              <MapPin className="w-10 h-10 text-[#F5D848] fill-black drop-shadow-lg" />
+              <MapPin className="w-10 h-10 text-[#84cc16] fill-black drop-shadow-lg" />
               <div className="absolute bottom-0 w-3 h-1 bg-black/50 blur-[2px] rounded-full" />
             </div>
           );

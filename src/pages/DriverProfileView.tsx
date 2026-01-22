@@ -72,7 +72,7 @@ const DriverProfileView = () => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#1A1A1A]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F5D848] mx-auto"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#84cc16] mx-auto"></div>
             </div>
         );
     }
@@ -91,7 +91,7 @@ const DriverProfileView = () => {
     return (
         <div className="min-h-screen bg-[#1A1A1A]" dir="rtl">
             {/* Header Gradient */}
-            <div className="bg-gradient-to-b from-[#F5D848] via-[#F5D848]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5 relative">
+            <div className="bg-gradient-to-b from-[#84cc16] via-[#84cc16]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5 relative">
                 <div className="flex items-center justify-between mb-4">
                     <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-black hover:bg-black/10">
                         <ArrowRight className="w-6 h-6" />
@@ -131,7 +131,7 @@ const DriverProfileView = () => {
                     {/* Vehicle Type Badge */}
                     {driver.vehicle_type && (
                         <div className="flex justify-center mb-3">
-                            <span className="bg-[#F5D848] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-yellow-500/20">
+                            <span className="bg-[#84cc16] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-lime-500/20">
                                 {driver.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
                                 {driver.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
                                 {driver.vehicle_type === 'vtc' && '🚙 سائق خاص'}
@@ -141,8 +141,8 @@ const DriverProfileView = () => {
                     )}
 
                     <div className="flex items-center justify-center gap-1 mt-2">
-                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                        <span className="font-bold text-xl text-yellow-500">
+                        <Star className="w-5 h-5 fill-lime-500 text-lime-500" />
+                        <span className="font-bold text-xl text-lime-500">
                             {driver.rating.toFixed(1)}
                         </span>
                         <span className="text-sm text-gray-400 mx-1">
@@ -155,12 +155,12 @@ const DriverProfileView = () => {
             <div className="px-6 -mt-6">
                 <div className="grid grid-cols-2 gap-4 w-full mt-4">
                     <div className="bg-[#242424] rounded-xl p-4 text-center border border-white/5 shadow-lg">
-                        <Car className="w-6 h-6 mx-auto text-[#F5D848] mb-2" />
+                        <Car className="w-6 h-6 mx-auto text-[#84cc16] mb-2" />
                         <p className="font-bold text-white truncate">{driver.car_model || 'سيارة'}</p>
                         <p className="text-xs text-gray-400 mt-1">{driver.license_plate || '---'}</p>
                     </div>
                     <div className="bg-[#242424] rounded-xl p-4 text-center border border-white/5 shadow-lg">
-                        <Award className="w-6 h-6 mx-auto text-[#F5D848] mb-2" />
+                        <Award className="w-6 h-6 mx-auto text-[#84cc16] mb-2" />
                         <p className="font-bold text-white text-sm">عضو منذ</p>
                         <p className="text-xs text-gray-400 mt-1">{joinDate}</p>
                     </div>

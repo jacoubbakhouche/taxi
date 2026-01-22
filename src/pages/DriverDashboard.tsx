@@ -1092,7 +1092,7 @@ const DriverDashboard = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <span className={cn(
                     "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-yellow-500 text-black"
+                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-lime-500 text-black"
                   )}>
                     {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
                   </span>
@@ -1120,7 +1120,7 @@ const DriverDashboard = () => {
               </div>
               <div>
                 <h3 className="font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
-                <div className="flex items-center gap-1 text-xs text-yellow-500">
+                <div className="flex items-center gap-1 text-xs text-lime-500">
                   <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} ({customerInfo?.total_rides || 0} rides)
                 </div>
               </div>
@@ -1133,7 +1133,7 @@ const DriverDashboard = () => {
             {/* Complete Button */}
             <Button
               size="lg"
-              className="w-full h-14 text-lg font-bold rounded-xl bg-[#F5D848] text-black hover:bg-[#F5D848]/90 shadow-lg shadow-yellow-500/10"
+              className="w-full h-14 text-lg font-bold rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-lime-500/10"
               onClick={handleCompleteRide}
             >
               <CheckCircle className="mr-2 w-6 h-6" /> COMPLETE RIDE
