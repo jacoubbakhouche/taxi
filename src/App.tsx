@@ -13,6 +13,7 @@ import DriverDashboard from "./pages/DriverDashboard";
 import CustomerProfileView from "./pages/CustomerProfileView";
 import DriverProfile from "./pages/DriverProfile";
 import DriverProfileView from "./pages/DriverProfileView";
+import LocationPermission from "./pages/LocationPermission";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => {
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
             <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/location-permission" element={<LocationPermission />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

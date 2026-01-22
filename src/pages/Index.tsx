@@ -59,7 +59,7 @@ const Index = () => {
         <SwipeButton
           onComplete={() => {
             // Add a small delay for the animation to finish
-            setTimeout(() => navigate("/role-selection"), 300);
+            setTimeout(() => navigate("/location-permission"), 300);
           }}
           text="Swipe to Go"
         />

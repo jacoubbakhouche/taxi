@@ -62,7 +62,7 @@ const CustomerAuth = () => {
             title: "تم التسجيل بنجاح",
             description: "مرحباً بك في Taxi DZ",
           });
-          navigate("/customer/dashboard");
+          navigate("/location-permission");
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -76,7 +76,7 @@ const CustomerAuth = () => {
           title: "تم تسجيل الدخول بنجاح",
           description: "أهلاً بعودتك",
         });
-        navigate("/customer/dashboard");
+        navigate("/location-permission");
       }
     } catch (error: any) {
       toast({
