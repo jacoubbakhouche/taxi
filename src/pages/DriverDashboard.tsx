@@ -118,7 +118,7 @@ const DriverDashboard = () => {
         // Do not block ui, just warn
         if (error.code === 1) toast({ title: "GPS Permission Denied", description: "Allow location access.", variant: "destructive" });
       },
-      { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 } // Relaxed settings
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Match CustomerDashboard strictness
     );
 
     return () => {
@@ -283,42 +283,21 @@ const DriverDashboard = () => {
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast({ title: "GPS Error", description: "Browser does not support Geolocation", variant: "destructive" });
+      console.warn("Geolocation not supported");
       return;
     }
 
-    // Set timeout to force fallback if GPS hangs
-    const timeoutId = setTimeout(() => {
-      console.warn("GPS Request Timed Out - Using Fallback");
-      setDriverLocation([36.9009, 7.7669]); // Fallback: Annaba
-      setLocationKey(prev => prev + 1);
-      toast({
-        title: "GPS Weak",
-        description: "Could not get precise location. Using default location (Annaba).",
-        variant: "default"
-      });
-    }, 5000);
-
+    // Match CustomerDashboard logic: Accurate, Fresh, NO custom timeout blocking
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        clearTimeout(timeoutId); // Cancel timeout if successful
         setDriverLocation([position.coords.latitude, position.coords.longitude]);
         setLocationKey(prev => prev + 1);
       },
       (error) => {
-        clearTimeout(timeoutId);
         console.error("Error getting location:", error);
-        // Fallback on error too
-        setDriverLocation([36.9009, 7.7669]);
-        setLocationKey(prev => prev + 1);
-
-        toast({
-          title: "تنبيه",
-          description: "تم استخدام موقع افتراضي (عنابة) بسبب ضعف الإشارة.",
-          variant: "destructive",
-        });
+        // Silent fail or minimal log, don't block user with toast
       },
-      { timeout: 5000, enableHighAccuracy: true } // Native timeout
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
   };
 
