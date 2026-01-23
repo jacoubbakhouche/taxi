@@ -252,7 +252,7 @@ const DriverDashboard = () => {
     return R * c;
   };
 
-  const [locationKey, setLocationKey] = useState(0);
+
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
