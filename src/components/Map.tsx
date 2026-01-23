@@ -182,13 +182,13 @@ function RecenterControl({ center, onRecenter }: { center: [number, number], onR
   // Listen to center prop changes to hide button when parent updates location (e.g. driving mode)
   useEffect(() => {
     setIsProgrammaticMove(true);
-    map.flyTo(center, 15, { animate: true, duration: 1.5 });
+    map.flyTo(center, 16, { animate: true, duration: 1.5 });
     setShowButton(false);
   }, [center, map]);
 
   const handleRecenter = () => {
     setIsProgrammaticMove(true);
-    map.flyTo(center, 15, { animate: true, duration: 1 });
+    map.flyTo(center, 16, { animate: true, duration: 1 });
     setShowButton(false);
     onRecenter();
   };
