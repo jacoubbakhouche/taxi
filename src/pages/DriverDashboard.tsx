@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
-  // INITIALIZE TO NULL to prevent showing default "old" area
-  const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null);
+  // INITIALIZE WITH DEFAULT (Annaba) to show map IMMEDIATELY without blocking
+  const [driverLocation, setDriverLocation] = useState<[number, number] | null>([36.9009, 7.7669]);
   const [driverHeading, setDriverHeading] = useState(0);
   const [isOnline, setIsOnline] = useState(false);
   const [pendingRide, setPendingRide] = useState<any>(null);
