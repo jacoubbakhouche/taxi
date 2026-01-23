@@ -74,13 +74,19 @@ function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
         let anchor: [number, number] = [20, 20];
 
         // Determine icon based on marker.icon or fallback
+        // 3D Car Marker Implementation
         if (marker.icon === "🚗" || marker.icon === "car") {
           iconHtml = renderToStaticMarkup(
             <div
-              className="relative flex items-center justify-center w-10 h-10 bg-[#84cc16] rounded-full shadow-[0_0_15px_rgba(245,216,72,0.5)] border-2 border-white transition-transform duration-500 will-change-transform"
-              style={{ transform: `rotate(${marker.rotation || 0}deg)` }}
+              className="car-marker-container"
+              style={{
+                transform: `rotate(${marker.rotation || 0}deg)`,
+                transition: "transform 0.5s ease-in-out"
+              }}
             >
-              <Car className="w-5 h-5 text-black fill-black" />
+              <div style={{ fontSize: '32px', lineHeight: '1', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                🚖
+              </div>
             </div>
           );
         } else if (marker.icon === "🧍" || marker.icon === "user") {

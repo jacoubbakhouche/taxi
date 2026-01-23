@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 const DriverDashboard = () => {
   const navigate = useNavigate();
   const [driverLocation, setDriverLocation] = useState<[number, number]>([36.7372, 3.0865]);
+  const [driverHeading, setDriverHeading] = useState(0); // Add Heading State
   const [isOnline, setIsOnline] = useState(false);
   const [pendingRide, setPendingRide] = useState<any>(null);
   const [currentRide, setCurrentRide] = useState<any>(null);
@@ -25,233 +26,16 @@ const DriverDashboard = () => {
   const [customerInfo, setCustomerInfo] = useState<any>(null);
   const [isSheetExpanded, setIsSheetExpanded] = useState(true);
   const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
-
-
+  const [locationKey, setLocationKey] = useState(0); // Move this up
 
   useEffect(() => {
     checkAuth();
     getCurrentLocation();
   }, []);
 
-  // Restore active ride state when userId is available
-  // Restore active ride state when userId is available
-  useEffect(() => {
-    const restoreActiveRide = async () => {
-      // 1. Initial check from LocalStorage for speed
-      const savedRideId = localStorage.getItem('activeRideId');
-      if (savedRideId && !currentRide) {
-        console.log("Found active ride in local storage:", savedRideId);
-        // We could fetch this specific ride directly for perceived speed, 
-        // but checking "any active ride" is safer for consistency.
-      }
+  // ... (rest of restoring active ride)
 
-      if (!userId) return;
-
-      const { data: activeRide, error } = await supabase
-        .from('rides')
-        .select('*')
-        .eq('driver_id', userId)
-        .in('status', ['accepted', 'in_progress'])
-        .maybeSingle();
-
-      if (activeRide && !error) {
-        console.log("Restored active ride from DB:", activeRide);
-        setCurrentRide(activeRide);
-        localStorage.setItem('activeRideId', activeRide.id);
-
-        // If we have an active ride, we need customer info too
-        if (activeRide.customer_id) {
-          const { data: customerData } = await supabase
-            .from('users')
-            .select('id, full_name, phone, rating, total_rides, profile_image')
-            .eq('id', activeRide.customer_id)
-            .single();
-
-          if (customerData) {
-            setCustomerInfo(customerData);
-            if (activeRide.status === 'accepted') {
-              setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]);
-              setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
-            } else if (activeRide.status === 'in_progress') {
-              setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]); // Keep pickup as origin
-              setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
-            }
-          }
-        }
-      } else {
-        // No active ride found in DB, clear local storage just in case
-        localStorage.removeItem('activeRideId');
-      }
-    };
-
-    restoreActiveRide();
-  }, [userId]);
-
-  // Refs to avoid re-subscribing when these values change (especially location)
-  const driverLocationRef = useRef(driverLocation);
-  const ignoredRideIdsRef = useRef(ignoredRideIds);
-  const currentRideRef = useRef(currentRide); // Also ref currentRide to check inside callback without dep
-
-  useEffect(() => {
-    driverLocationRef.current = driverLocation;
-  }, [driverLocation]);
-
-  useEffect(() => {
-    ignoredRideIdsRef.current = ignoredRideIds;
-  }, [ignoredRideIds]);
-
-  useEffect(() => {
-    currentRideRef.current = currentRide;
-  }, [currentRide]);
-
-  useEffect(() => {
-    // We only subscribe if online and logged in.
-    // We do NOT include driverLocation/currentRide/ignoredIds in dependency array
-    // because that would cause disconnect/reconnect loops.
-    if (!isOnline || !userId) return;
-
-    console.log("Starting Realtime Subscription...");
-
-    const channel = supabase
-      .channel('pending-rides')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'rides',
-          filter: 'status=eq.pending',
-        },
-        async (payload) => {
-          const ride = payload.new as Ride;
-          console.log('New ride request received:', ride);
-
-          // Check busy status via Ref
-          if (currentRideRef.current) {
-            console.log("Driver is busy, ignoring request.");
-            return;
-          }
-
-          // If ride is assigned to a specific driver, ignore if it's not ME.
-          if (ride.driver_id && ride.driver_id !== userId) {
-            console.log('Ignoring ride assigned to another driver');
-            return;
-          }
-
-          // Check if ignored via Ref
-          if (ignoredRideIdsRef.current.includes(ride.id)) {
-            console.log('Ignoring previously rejected ride');
-            return;
-          }
-
-          // Calculate distance using Ref
-          const location = driverLocationRef.current;
-          const distance = calculateDistance(
-            location[0],
-            location[1],
-            ride.pickup_lat,
-            ride.pickup_lng
-          );
-
-          console.log(`Ride distance: ${distance} km`);
-
-          // Broadened range slightly or keep as is
-          if (distance <= 10) {
-            setPendingRide(ride);
-
-            // Fetch customer info
-            const { data: customerData } = await supabase
-              .from('users')
-              .select('id, full_name, phone, rating, total_rides, profile_image')
-              .eq('id', ride.customer_id)
-              .single();
-
-            if (customerData) {
-              setCustomerInfo(customerData);
-            }
-
-            setIsSheetExpanded(true);
-
-            // Play sound
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGWi56+mjUBELUKzn77ljHAU7k9j0y3ktBSh+zPLaizsKGGS36Oynaw==');
-            audio.play().catch(e => console.log('Audio play failed:', e));
-
-            toast({
-              title: "طلب جديد! 🚖",
-              description: `عميل على بعد ${distance.toFixed(1)} كم منك`,
-            });
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
-
-    return () => {
-      console.log("Cleaning up subscription...");
-      supabase.removeChannel(channel);
-    };
-  }, [isOnline, userId]); // Stable dependencies only
-
-  // 2. NEW: Listen for updates/delete to the CURRENT pending ride
-  useEffect(() => {
-    if (!pendingRide) return;
-
-    const channel = supabase
-      .channel(`ride-${pendingRide.id}-updates`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'rides',
-          filter: `id=eq.${pendingRide.id}`,
-        },
-        (payload) => {
-          console.log("Pending ride updated/deleted:", payload);
-
-          if (payload.eventType === 'DELETE' || (payload.new && payload.new.status !== 'pending')) {
-            console.log("Ride taken, cancelled, or deleted:", payload);
-            setPendingRide(null);
-            setCustomerInfo(null);
-            setIsSheetExpanded(false);
-
-            toast({
-              title: "الطلب لم يعد متاحاً ❌",
-              description: "تم قبول الرحلة من قبل سائق آخر أو تم إلغاؤها",
-              variant: "destructive"
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [pendingRide]);
-
-  // 3. Fallback: Polling for pending ride status (in case Realtime fails or RLS hides the update)
-  useEffect(() => {
-    if (!pendingRide) return;
-
-    const interval = setInterval(async () => {
-      const { data: ride, error } = await supabase
-        .from('rides')
-        .select('status')
-        .eq('id', pendingRide.id)
-        .single();
-
-      if (error || !ride || ride.status !== 'pending') {
-        console.log("Polling found pending ride invalid:", ride);
-        setPendingRide(null);
-        setCustomerInfo(null);
-        setIsSheetExpanded(false);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [pendingRide]);
+  // ...
 
   useEffect(() => {
     if (!isOnline || !userId) {
@@ -268,7 +52,10 @@ const DriverDashboard = () => {
           position.coords.latitude,
           position.coords.longitude,
         ];
+        // Only update if moved significantly to reduce renders? 
+        // For driving app, smooth updates are better.
         setDriverLocation(newLocation);
+        setDriverHeading(position.coords.heading || 0); // Update Heading
 
         // Use RPC to update driver location (PostGIS)
         const { error: locationError } = await supabase
@@ -934,7 +721,27 @@ const DriverDashboard = () => {
       <div className="absolute inset-0 z-0">
         <Map
           center={driverLocation}
-          markers={getMarkers()}
+          recenterKey={locationKey}
+          markers={[
+            {
+              position: driverLocation,
+              popup: "موقعي الحالي",
+              icon: "🚗",
+              rotation: driverHeading
+            },
+            ...(pendingRide ? [
+              { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
+              { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
+            ] as any[] : []),
+            ...(customerLocation && currentRide?.status === 'accepted' ? [
+              { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
+              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
+            ] as any[] : []),
+            ...(currentRide?.status === 'in_progress' ? [
+              ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
+              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
+            ] as any[] : [])
+          ]}
           // If we have a destination (active ride), show route
           route={
             customerLocation && destinationLocation

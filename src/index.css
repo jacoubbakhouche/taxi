@@ -85,3 +85,21 @@
 .leaflet-container {
   background: #242424 !important;
 }
+
+/* Smooth Movement Transition */
+.leaflet-marker-icon {
+  transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Car Breathing Animation */
+.car-marker-container {
+  animation: floatCar 2s ease-in-out infinite;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes floatCar {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); } 
+  100% { transform: scale(1); }
+}

@@ -192,13 +192,20 @@ const CustomerDashboard = () => {
 
   // Phantom Cars Polling
   useEffect(() => {
-    if (!userLocation) return;
+    // STRICT RULE: Only show cars when a destination/pickup point is selected
+    // If no destination is set, show NOTHING (clean map)
+    const center = destination;
+
+    if (!center) {
+      setNearbyDrivers([]); // Clear existing cars
+      return;
+    }
 
     const fetchDrivers = async () => {
       const { data } = await supabase.rpc('get_nearby_drivers', {
-        p_lat: userLocation[0],
-        p_lng: userLocation[1],
-        p_radius_meters: 5000
+        p_lat: center[0],
+        p_lng: center[1],
+        p_radius_meters: 5000 // Keep 5km radius
       });
 
       if (data) {
@@ -215,7 +222,7 @@ const CustomerDashboard = () => {
     const interval = setInterval(fetchDrivers, 10000); // Poll every 10s
 
     return () => clearInterval(interval);
-  }, [userLocation]);
+  }, [destination]); // Only re-run when destination changes
 
   // Driver Location Subscription
   useEffect(() => {
