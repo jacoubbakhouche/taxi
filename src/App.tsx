@@ -40,8 +40,8 @@ const App = () => {
             <Route path="/driver/profile" element={<DriverProfile />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
             <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminAuth />} />
+            {/* Admin Routes - Direct Access Mode (No Auth) */}
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/location-permission" element={<LocationPermission />} />

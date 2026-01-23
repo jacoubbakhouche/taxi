@@ -48,10 +48,8 @@ const AdminDashboard = () => {
 
     const checkAdmin = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            navigate("/admin");
-            return;
-        }
+        // Direct Access Mode: No strict auth check
+        // if (!session) navigate("/admin");
     };
 
     const handleLogout = async () => {

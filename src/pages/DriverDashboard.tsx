@@ -190,16 +190,21 @@ const DriverDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       // ... (existing user fetch) ...
+      let user = null;
       const result = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', session.user.id)
         .maybeSingle();
 
-      // ... (existing result handling) ...
       if (!result.error && result.data) {
         user = result.data;
-        // ...
+      }
+
+      if (!user) {
+        console.error("User profile not found");
+        // Handle missing profile logic if needed or just return
+        // But sticking to the pasted structure:
       }
 
       // 1. CHECK DOCUMENTS / VERIFICATION
@@ -359,12 +364,27 @@ const DriverDashboard = () => {
 
   const toggleOnline = async () => {
     if (!userId) {
+      console.error("toggleOnline: userId is missing!");
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("Found session, attempting to refetch user...");
+        // Quick fetch to recover
+        const { data: userData } = await supabase.from('users').select('id, is_verified').eq('auth_id', data.session.user.id).single();
+        if (userData) {
+          console.log("Recovered userId:", userData.id);
+          setUserId(userData.id);
+          // Now proceed with update? No, let user click again or recursive call?
+          // Let's just return nicely with a prompt.
+          toast({ title: "تم تحديث البيانات", description: "يرجى المحاولة مجدداً الآن." });
+          return;
+        }
+      }
+
       toast({
-        title: "غير متصل",
-        description: "جاري التحقق من الحساب... حاول مرة أخرى خلال ثوانٍ",
-        variant: "default",
+        title: "خطأ في الاتصال",
+        description: "لا يمكن تحديد معرف السائق. يرجى تحديث الصفحة.",
+        variant: "destructive",
       });
-      checkAuth(); // Retry auth check
       return;
     }
 
