@@ -56,7 +56,8 @@ const DriverDashboard = () => {
       return;
     }
 
-    console.log("Starting High-Accuracy GPS Watch...");
+    console.log("Starting GPS Watch...");
+    getCurrentLocation(); // Try single-shot immediately to trigger fallback logic if watch hangs
 
     // Force High Accuracy
     watchIdRef.current = navigator.geolocation.watchPosition(
