@@ -246,30 +246,21 @@ const DriverDashboard = () => {
         const now = new Date();
         const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
 
-        if (!subEnd || subEnd < now) {
-          console.log("Subscription expired or missing:", user.subscription_end_date);
-          // Treat as Unverified so they see the "Upload/Pay" screen (or we can add a specific Pay screen later)
-          // For now, user said "Cancel activation ... until he pays", so treating as unverified is correct.
+        if (subEnd && subEnd < new Date()) {
+          console.log("Subscription expired:", user.subscription_end_date);
+
+          toast({
+            title: "انتهى الاشتراك ⏳",
+            description: "يرجى الاتصال بالإدارة لتجديد اشتراكك الشهري.",
+            variant: "destructive",
+            duration: 6000
+          });
+
           setIsVerified(false);
-          setDocumentsSubmitted(true); // Treat as "Docs sent but not active" -> pending/rejected view?
-          // Actually, if we want them to see "Upload" again? 
-          // The user said: "shows him upload screen".
-          // If we set documentsSubmitted=false, they see upload screen.
-          // If they are just "Expired", maybe we DO want them to contact admin?
-          // Let's stick to the Admin workflow: Admin Unverifies -> Docs Wiped (in previous logic, now reverted).
-          // NOW: Admin Unverifies -> is_verified=false.
-          // So code hits check #1 above (!user.is_verified).
-          // So we don't strictly need a separate check here IF the DB state is consistent.
-          // BUT, if the date expires automatically, we should block them.
-          setIsVerified(false);
-          // If we want them to see the "Upload" screen to re-trigger or see a message:
-          // Let's set documentsSubmitted = true so they see "Waiting Approval" or similar?
-          // User said: "Each 30 days ... cancel activation ... until he pays".
-          // If we just set isVerified=false, they go to "Waiting". Admin sees "Expired". Admin takes money. Admin clicks Verify.
-          // This seems consistent.
           return;
         }
 
+        // If subEnd is null (New Driver) OR future (Paid Driver) -> Allow.
         setIsVerified(true);
         setIsOnline(user.is_online || false);
       }

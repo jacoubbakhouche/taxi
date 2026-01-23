@@ -54,6 +54,8 @@ const DriverAuth = () => {
               full_name: validated.fullName,
               phone: validated.phone,
               role: "driver",
+              is_verified: true, // Phase 1: Free Entry (Can work immediately)
+              subscription_end_date: null // Null means "Free Mode" until Admin intervenes
             });
 
           if (userError) throw userError;
