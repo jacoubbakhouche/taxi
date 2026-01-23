@@ -249,15 +249,18 @@ const DriverDashboard = () => {
         if (subEnd && subEnd < new Date()) {
           console.log("Subscription expired:", user.subscription_end_date);
 
-          toast({
-            title: "انتهى الاشتراك ⏳",
-            description: "يرجى الاتصال بالإدارة لتجديد اشتراكك الشهري.",
-            variant: "destructive",
-            duration: 6000
-          });
+          // FREE MODE ENABLED: Do not block.
+          // toast({
+          //   title: "انتهى الاشتراك ⏳",
+          //   description: "يرجى الاتصال بالإدارة لتجديد اشتراكك الشهري.",
+          //   variant: "destructive",
+          //   duration: 6000
+          // });
 
-          setIsVerified(false);
-          return;
+          // setIsVerified(false);
+          // return;
+
+          console.log("Allowing access despite expiry (Free Mode)");
         }
 
         // If subEnd is null (New Driver) OR future (Paid Driver) -> Allow.

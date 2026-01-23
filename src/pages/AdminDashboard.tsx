@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { LogOut, Search, ShieldCheck, CheckCircle, XCircle, Trash2, User, Car, Filter, AlertCircle } from "lucide-react";
+import { LogOut, Search, ShieldCheck, CheckCircle, XCircle, Trash2, User, Car, Filter, AlertCircle, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { DriverDetailDrawer } from "@/components/admin/DriverDetailDrawer";
 
@@ -94,17 +94,22 @@ const AdminDashboard = () => {
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
     };
 
-    const resetSystem = async () => {
-        if (!confirm("RESET SYSTEM?\nThis will Unverify EVERYONE and wipe their subscription dates.\n(Docs will be kept).")) return;
+    const enforcePremiumReset = async () => {
+        if (!confirm("⚠️ ENFORCE PREMIUM RESET? ⚠️\n\nThis will:\n1. KICK OUT all drivers.\n2. ERASE their current verification.\n3. FORCE them to re-upload documents & pay.\n\nAre you sure?")) return;
         try {
-            // Updated reset logic: Unverify, Clear Sub, Keep Docs (as per CRM transition)
             const { error } = await supabase.from('users')
-                .update({ is_verified: false, subscription_end_date: null })
+                .update({
+                    is_verified: false,
+                    documents_submitted: false,
+                    subscription_end_date: null,
+                    driving_license_url: null,
+                    carte_grise_url: null
+                })
                 .eq('role', 'driver');
 
             if (error) throw error;
             fetchUsers();
-            toast({ title: "System Reset", description: "All drivers set to Inactive (Free Mode)." });
+            toast({ title: "Premium Reset Complete", description: "All drivers evicted. Entry requires new docs + payment." });
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
         }
@@ -122,8 +127,8 @@ const AdminDashboard = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={resetSystem} className="text-white border-[#444] bg-red-900/20 hover:bg-red-900/40">
-                        <Trash2 className="w-4 h-4 mr-1" /> Reset
+                    <Button variant="destructive" size="sm" onClick={enforcePremiumReset} className="text-white border-red-500/50 bg-red-900/40 hover:bg-red-600 font-bold animate-pulse">
+                        <AlertTriangle className="w-4 h-4 mr-2" /> Enforce Premium Mode
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleLogout} className="text-white border-[#444] hover:bg-[#222]">
                         <LogOut className="w-4 h-4 mr-1" /> Logout
