@@ -60,16 +60,16 @@ const AdminDashboard = () => {
         try {
             const newStatus = !currentStatus;
 
-            // If we are Unverifying (Active -> Inactive), we typically want them to RE-UPLOAD documents.
-            // So we reset their document status too.
-            const updates = newStatus
-                ? { is_verified: true } // activating
-                : { // deactivating - reset checks
-                    is_verified: false,
-                    documents_submitted: false,
-                    driving_license_url: null,
-                    carte_grise_url: null
-                };
+            let updates: any = { is_verified: newStatus };
+
+            if (newStatus) {
+                // ACTIVATING: Grant 30 days subscription
+                const nextMonth = new Date();
+                nextMonth.setDate(nextMonth.getDate() + 30);
+                updates.subscription_end_date = nextMonth.toISOString();
+            }
+            // IF DEACTIVATING: Do NOT wipe docs. Just is_verified = false.
+            // This allows them to stay "Submitted" but "Inactive" (unpaid).
 
             const { error } = await supabase.from('users').update(updates).eq('id', id);
 
@@ -79,8 +79,8 @@ const AdminDashboard = () => {
             setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u));
 
             toast({
-                title: newStatus ? "Driver Verified" : "Driver Rejected",
-                description: newStatus ? "Driver is now active." : "Driver has been reset and must re-upload docs.",
+                title: newStatus ? "Driver Activated (30 Days)" : "Driver Deactivated",
+                description: newStatus ? "Subscription granted." : "Driver stopped (Unpaid). Documents kept.",
                 variant: newStatus ? "default" : "destructive"
             });
         } catch (error) {
@@ -100,6 +100,16 @@ const AdminDashboard = () => {
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
         }
+    };
+
+    // Helper to calculate days left
+    const getDaysLeft = (dateStr: string | null) => {
+        if (!dateStr) return 0;
+        const end = new Date(dateStr).getTime();
+        const now = new Date().getTime();
+        const diff = end - now;
+        if (diff < 0) return 0;
+        return Math.ceil(diff / (1000 * 60 * 60 * 24));
     };
 
     // Filter Logic
@@ -160,6 +170,7 @@ const AdminDashboard = () => {
                             <TableRow className="border-[#333]">
                                 <TableHead className="text-gray-400">User</TableHead>
                                 <TableHead className="text-gray-400">Role</TableHead>
+                                <TableHead className="text-gray-400">Sub (Days)</TableHead>
                                 <TableHead className="text-gray-400">Vehicle / Docs</TableHead>
                                 <TableHead className="text-gray-400">Status</TableHead>
                                 <TableHead className="text-right text-gray-400">Action</TableHead>
@@ -196,6 +207,18 @@ const AdminDashboard = () => {
                                             <Badge variant="outline" className="capitalize border-[#444] text-gray-300">
                                                 {user.role}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.role === 'driver' && (
+                                                <div className="flex flex-col">
+                                                    <span className={`text-sm font-mono ${getDaysLeft(user.subscription_end_date) > 5 ? "text-green-400" : "text-red-400"}`}>
+                                                        {getDaysLeft(user.subscription_end_date)} Days
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500">
+                                                        {user.subscription_end_date ? new Date(user.subscription_end_date).toLocaleDateString() : "-"}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {user.role === 'driver' ? (
