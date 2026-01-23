@@ -227,6 +227,11 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
 
   const displayRoute = enhancedRoute || route;
 
+  if (!center || isNaN(center[0]) || isNaN(center[1])) {
+    console.warn("Map received invalid center:", center);
+    return null; // Don't render map with invalid center
+  }
+
   return (
     <div className="w-full h-full rounded-lg overflow-hidden shadow-lg relative">
       <div style={{ height: "100%", width: "100%" }}>

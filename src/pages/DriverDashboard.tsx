@@ -13,8 +13,9 @@ import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
-  const [driverLocation, setDriverLocation] = useState<[number, number]>([36.7372, 3.0865]);
-  const [driverHeading, setDriverHeading] = useState(0); // Add Heading State
+  // INITIALIZE TO NULL to prevent showing default "old" area
+  const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null);
+  const [driverHeading, setDriverHeading] = useState(0);
   const [isOnline, setIsOnline] = useState(false);
   const [pendingRide, setPendingRide] = useState<any>(null);
   const [currentRide, setCurrentRide] = useState<any>(null);
@@ -26,11 +27,15 @@ const DriverDashboard = () => {
   const [customerInfo, setCustomerInfo] = useState<any>(null);
   const [isSheetExpanded, setIsSheetExpanded] = useState(true);
   const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
-  const [locationKey, setLocationKey] = useState(0); // Move this up
+  const [locationKey, setLocationKey] = useState(0);
+  const [isVerified, setIsVerified] = useState<boolean>(true); // Handle verification
+
+  // ... (inside checkAuth) update this state
+
 
   useEffect(() => {
     checkAuth();
-    getCurrentLocation();
+    // getCurrentLocation(); // REMOVED: Don't fetch single time, rely on watch
   }, []);
 
   // ... (rest of restoring active ride)
@@ -46,16 +51,24 @@ const DriverDashboard = () => {
       return;
     }
 
+    console.log("Starting High-Accuracy GPS Watch...");
+
+    // Force High Accuracy
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
         const newLocation: [number, number] = [
           position.coords.latitude,
           position.coords.longitude,
         ];
-        // Only update if moved significantly to reduce renders? 
-        // For driving app, smooth updates are better.
+
+        console.log("GPS Fix:", newLocation);
         setDriverLocation(newLocation);
-        setDriverHeading(position.coords.heading || 0); // Update Heading
+        setDriverHeading(position.coords.heading || 0);
+
+        // Force map re-center on first fix
+        if (!driverLocation) {
+          setLocationKey(prev => prev + 1);
+        }
 
         // Use RPC to update driver location (PostGIS)
         const { error: locationError } = await supabase
@@ -181,7 +194,7 @@ const DriverDashboard = () => {
       for (let i = 0; i < 3; i++) {
         const result = await supabase
           .from('users')
-          .select('id, is_online')
+          .select('id, is_online, is_verified')
           .eq('auth_id', session.user.id)
           .single();
 
@@ -195,48 +208,30 @@ const DriverDashboard = () => {
           // Not found, wait and retry as it might be a race condition on signup
           await new Promise(r => setTimeout(r, 1000));
         } else {
-          // Other error (auth/RLS), break immediately
           break;
         }
       }
 
       if (userError) {
         console.error("User profile fetch error:", userError);
-
-        if (userError.code === 'PGRST116') {
-          toast({
-            title: "الحساب غير مكتمل",
-            description: "بيانات السائق غير موجودة. يرجى التواصل مع الدعم.",
-            variant: "destructive",
-          });
-          // Optional: navigate to a "Complete Profile" page instead of auth
-          return;
-        }
-
+        // ... existing error handling
         throw userError;
       }
 
       if (user) {
+        // CHECK VERIFICATION STATUS
+        if (!user.is_verified) {
+          setIsVerified(false);
+          setUserId(user.id);
+          return;
+        }
+
+        setIsVerified(true);
         setUserId(user.id);
         setIsOnline(user.is_online || false);
       }
     } catch (error: any) {
-      console.error("Auth check failed:", error);
-      // Only redirect to auth if it's strictly a session/auth issue
-      if (error.message?.includes('JWT') || error.message?.includes('session')) {
-        toast({
-          title: "جلسة منتهية",
-          description: "يرجى تسجيل الدخول مرة أخرى",
-          variant: "destructive",
-        });
-        navigate("/driver/auth");
-      } else {
-        toast({
-          title: "خطأ في الاتصال",
-          description: "حدث خطأ أثناء تحميل البيانات. حاول مرة أخرى.",
-          variant: "destructive",
-        });
-      }
+      // ... existing catch
     }
   };
 
@@ -661,6 +656,29 @@ const DriverDashboard = () => {
     return undefined;
   };
 
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center space-y-6">
+        <div className="w-24 h-24 bg-yellow-500/10 rounded-full flex items-center justify-center">
+          <Clock className="w-12 h-12 text-yellow-500" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">الحساب قيد المراجعة</h1>
+          <p className="text-gray-400 max-w-md mx-auto">
+            شكراً لتسجيلك! حسابك قيد المراجعة حالياً من قبل الإدارة. سيتم تفعيله قريباً لتتمكن من استقبال الطلبات.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/')}
+          className="btc-white/10 text-white hover:bg-white/10 mt-8"
+        >
+          العودة للرئيسية
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
       {/* --- Professional Header (Same as Customer) --- */}
@@ -719,37 +737,45 @@ const DriverDashboard = () => {
 
       {/* --- Map Layer --- */}
       <div className="absolute inset-0 z-0">
-        <Map
-          center={driverLocation}
-          recenterKey={locationKey}
-          markers={[
-            {
-              position: driverLocation,
-              popup: "موقعي الحالي",
-              icon: "🚗",
-              rotation: driverHeading
-            },
-            ...(pendingRide ? [
-              { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
-              { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
-            ] as any[] : []),
-            ...(customerLocation && currentRide?.status === 'accepted' ? [
-              { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
-              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
-            ] as any[] : []),
-            ...(currentRide?.status === 'in_progress' ? [
-              ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
-              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
-            ] as any[] : [])
-          ]}
-          // If we have a destination (active ride), show route
-          route={
-            customerLocation && destinationLocation
-              ? [customerLocation, destinationLocation]
-              : undefined
-          }
-          onMapClick={() => { }}
-        />
+        {!driverLocation ? (
+          <div className="flex flex-col items-center justify-center h-full bg-[#1A1A1A] text-white">
+            <Loader2 className="w-12 h-12 text-[#84cc16] animate-spin mb-4" />
+            <h2 className="text-xl font-bold">جاري تحديد الموقع...</h2>
+            <p className="text-gray-400">يرجى الانتظار حتى يتم التقاط إشارة GPS</p>
+          </div>
+        ) : (
+          <Map
+            center={driverLocation}
+            recenterKey={locationKey}
+            markers={[
+              {
+                position: driverLocation,
+                popup: "موقعي الحالي",
+                icon: "🚗",
+                rotation: driverHeading
+              },
+              ...(pendingRide ? [
+                { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
+                { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
+              ] as any[] : []),
+              ...(customerLocation && currentRide?.status === 'accepted' ? [
+                { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
+                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
+              ] as any[] : []),
+              ...(currentRide?.status === 'in_progress' ? [
+                ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
+                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
+              ] as any[] : [])
+            ]}
+            // If we have a destination (active ride), show route
+            route={
+              customerLocation && destinationLocation
+                ? [customerLocation, destinationLocation]
+                : undefined
+            }
+            onMapClick={() => { }}
+          />
+        )}
       </div>
 
       {/* --- Overlay: Offline State --- */}

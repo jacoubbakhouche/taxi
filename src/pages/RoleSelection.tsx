@@ -82,6 +82,16 @@ const RoleSelection = () => {
             </div>
           </Card>
 
+          {/* Admin Portal Link */}
+          <div className="flex justify-center pt-6 opacity-40 hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-2 text-xs text-white/60 hover:text-[#84cc16] uppercase tracking-widest transition-colors"
+            >
+              For Admins: Login Here
+            </button>
+          </div>
+
         </div>
       </div>
 

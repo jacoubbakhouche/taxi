@@ -15,10 +15,13 @@ import DriverProfile from "./pages/DriverProfile";
 import DriverProfileView from "./pages/DriverProfileView";
 import LocationPermission from "./pages/LocationPermission";
 import NotFound from "./pages/NotFound";
+import AdminAuth from "./pages/AdminAuth";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  console.log("App initialized"); // Debug log force rebuild
   console.log("App component rendering...");
   return (
     <QueryClientProvider client={queryClient}>
@@ -37,6 +40,9 @@ const App = () => {
             <Route path="/driver/profile" element={<DriverProfile />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
             <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminAuth />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/location-permission" element={<LocationPermission />} />
             <Route path="*" element={<NotFound />} />
