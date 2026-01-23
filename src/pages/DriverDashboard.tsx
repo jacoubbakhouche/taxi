@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
-  // INITIALIZE WITH DEFAULT (Annaba) to show map IMMEDIATELY without blocking
-  const [driverLocation, setDriverLocation] = useState<[number, number] | null>([36.9009, 7.7669]);
+  // Initialize to null, but we will render map anyway with a fallback center
+  const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null);
   const [driverHeading, setDriverHeading] = useState(0);
   const [isOnline, setIsOnline] = useState(false);
   const [pendingRide, setPendingRide] = useState<any>(null);
@@ -958,56 +958,38 @@ const DriverDashboard = () => {
 
       {/* --- Map Layer --- */}
       <div className="absolute inset-0 z-0">
-        {!driverLocation ? (
-          <div className="flex flex-col items-center justify-center h-full bg-[#1A1A1A] text-white p-4">
-            <Loader2 className="w-12 h-12 text-[#84cc16] animate-spin mb-4" />
-            <h2 className="text-xl font-bold mb-2">جاري تحديد الموقع...</h2>
-            <p className="text-gray-400 mb-6 text-center text-sm">يرجى الانتظار حتى يتم التقاط إشارة GPS</p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDriverLocation([36.9009, 7.7669]);
-                setLocationKey(prev => prev + 1);
-                toast({ title: "وضع يدوي", description: "تم استخدام موقع افتراضي لدخول التطبيق." });
-              }}
-              className="border-white/20 text-white/60 hover:text-white hover:bg-white/10"
-            >
-              تخطي (استخدام موقع افتراضي)
-            </Button>
-          </div>
-        ) : (
-          <Map
-            center={driverLocation}
-            recenterKey={locationKey}
-            markers={[
-              {
-                position: driverLocation,
-                popup: "موقعي الحالي",
-                icon: "🚗",
-                rotation: driverHeading
-              },
-              ...(pendingRide ? [
-                { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
-                { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
-              ] as any[] : []),
-              ...(customerLocation && currentRide?.status === 'accepted' ? [
-                { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
-                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
-              ] as any[] : []),
-              ...(currentRide?.status === 'in_progress' ? [
-                ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
-                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
-              ] as any[] : [])
-            ]}
-            // If we have a destination (active ride), show route
-            route={
-              customerLocation && destinationLocation
-                ? [customerLocation, destinationLocation]
-                : undefined
-            }
-            onMapClick={() => { }}
-          />
-        )}
+        <Map
+          center={driverLocation || [36.7538, 3.0588]} // Default to Algiers if waiting for GPS
+          recenterKey={locationKey}
+          markers={[
+            ...(driverLocation ? [{
+              position: driverLocation,
+              popup: "موقعي الحالي",
+              icon: "🚗",
+              rotation: driverHeading
+            }] : []),
+            ...(pendingRide ? [
+              { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
+              { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
+            ] as any[] : []),
+            ...(customerLocation && currentRide?.status === 'accepted' ? [
+              { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
+              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
+            ] as any[] : []),
+            ...(currentRide?.status === 'in_progress' ? [
+              ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
+              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
+            ] as any[] : [])
+          ]}
+          // If we have a destination (active ride), show route
+          route={
+            customerLocation && destinationLocation
+              ? [customerLocation, destinationLocation]
+              : undefined
+          }
+          onMapClick={() => { }}
+        />
+
       </div>
 
       {/* --- Overlay: Offline State --- */}
