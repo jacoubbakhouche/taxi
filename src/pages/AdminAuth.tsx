@@ -60,35 +60,37 @@ const AdminAuth = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-            <Card className="w-full max-w-md shadow-xl">
+        <div className="min-h-screen flex items-center justify-center bg-black p-4">
+            <Card className="w-full max-w-md shadow-xl bg-[#111] border-[#333]">
                 <CardHeader className="text-center space-y-2">
                     <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                         <ShieldCheck className="w-8 h-8 text-primary" />
                     </div>
-                    <CardTitle className="text-2xl font-bold text-gray-800">Admin Portal</CardTitle>
-                    <p className="text-sm text-gray-500">Authorized personnel only</p>
+                    <CardTitle className="text-2xl font-bold text-white">Admin Portal</CardTitle>
+                    <p className="text-sm text-gray-400">Authorized personnel only</p>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Email</label>
+                            <label className="text-sm font-medium text-gray-200">Email</label>
                             <Input
                                 type="email"
                                 placeholder="admin@taxi.dz"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
+                                className="bg-[#222] border-[#444] text-white placeholder:text-gray-500"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Password</label>
+                            <label className="text-sm font-medium text-gray-200">Password</label>
                             <Input
                                 type="password"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                className="bg-[#222] border-[#444] text-white placeholder:text-gray-500"
                             />
                         </div>
                         <Button className="w-full" type="submit" disabled={loading}>

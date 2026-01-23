@@ -28,7 +28,12 @@ const DriverDashboard = () => {
   const [isSheetExpanded, setIsSheetExpanded] = useState(true);
   const [ignoredRideIds, setIgnoredRideIds] = useState<string[]>([]);
   const [locationKey, setLocationKey] = useState(0);
+
   const [isVerified, setIsVerified] = useState<boolean>(true); // Handle verification
+  const [documentsSubmitted, setDocumentsSubmitted] = useState<boolean>(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [carteGriseFile, setCarteGriseFile] = useState<File | null>(null);
 
   // ... (inside checkAuth) update this state
 
@@ -194,12 +199,11 @@ const DriverDashboard = () => {
       for (let i = 0; i < 3; i++) {
         const result = await supabase
           .from('users')
-          .select('id, is_online, is_verified')
-          .eq('auth_id', session.user.id)
-          .single();
-
         if (result.data) {
           user = result.data;
+          // Ensure we type check or fetch correct fields
+          // @ts-ignore
+          user.documents_submitted = result.data.documents_submitted;
           userError = null;
           break;
         }
@@ -223,6 +227,7 @@ const DriverDashboard = () => {
         if (!user.is_verified) {
           setIsVerified(false);
           setUserId(user.id);
+          setDocumentsSubmitted(user.documents_submitted || false);
           return;
         }
 
@@ -265,6 +270,68 @@ const DriverDashboard = () => {
           });
         }
       );
+    }
+  };
+
+  const handleUploadDocuments = async () => {
+    if (!licenseFile || !carteGriseFile || !userId) {
+      toast({
+        title: "Missing Documents",
+        description: "Please select both Driving License and Carte Grise images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingFiles(true);
+    try {
+      // Helper to upload file
+      const uploadFile = async (file: File, path: string) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}/${path}_${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('driver_documents')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('driver_documents')
+          .getPublicUrl(fileName);
+
+        return publicUrl;
+      };
+
+      const licenseUrl = await uploadFile(licenseFile, 'license');
+      const carteGriseUrl = await uploadFile(carteGriseFile, 'carte_grise');
+
+      // Update User Profile
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          driving_license_url: licenseUrl,
+          carte_grise_url: carteGriseUrl,
+          documents_submitted: true
+        })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      setDocumentsSubmitted(true);
+      toast({
+        title: "Documents Sent! 📄✅",
+        description: "Your account is now under review. Please wait for approval.",
+      });
+
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Could not upload documents.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFiles(false);
     }
   };
 
@@ -658,23 +725,110 @@ const DriverDashboard = () => {
 
   if (!isVerified) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center space-y-6">
-        <div className="w-24 h-24 bg-yellow-500/10 rounded-full flex items-center justify-center">
-          <Clock className="w-12 h-12 text-yellow-500" />
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 space-y-6 font-sans">
+        <div className="w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center animate-pulse">
+          <ShieldCheck className="w-10 h-10 text-yellow-400" />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold mb-2">الحساب قيد المراجعة</h1>
-          <p className="text-gray-400 max-w-md mx-auto">
-            شكراً لتسجيلك! حسابك قيد المراجعة حالياً من قبل الإدارة. سيتم تفعيله قريباً لتتمكن من استقبال الطلبات.
+
+        <div className="text-center space-y-2 max-w-md">
+          <h1 className="text-2xl font-bold">Verification Required</h1>
+          <p className="text-gray-400">
+            {documentsSubmitted
+              ? "Your documents have been received and are under review. Please wait for admin approval."
+              : "To start driving, please upload your driving license and registration card."}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => navigate('/')}
-          className="btc-white/10 text-white hover:bg-white/10 mt-8"
-        >
-          العودة للرئيسية
-        </Button>
+
+        {documentsSubmitted ? (
+          <div className="bg-[#1A1A1A] p-6 rounded-xl border border-white/10 w-full max-w-sm text-center shadow-2xl">
+            <Clock className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+            <h3 className="font-bold text-lg mb-2">Under Review</h3>
+            <p className="text-sm text-gray-500 mb-6">This usually takes 1-24 hours</p>
+            <Button variant="outline" className="w-full border-[#333] hover:bg-[#222] text-white" onClick={() => window.location.reload()}>
+              Check Status
+            </Button>
+          </div>
+        ) : (
+          <div className="w-full max-w-sm space-y-4 bg-[#1A1A1A] p-6 rounded-xl border border-white/10 shadow-2xl">
+            {/* Driving License Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Driving License (Permis)</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="license-upload"
+                  onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+                />
+                <label
+                  htmlFor="license-upload"
+                  className={cn(
+                    "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
+                    licenseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
+                  )}
+                >
+                  {licenseFile ? (
+                    <div className="text-center">
+                      <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
+                      <span className="text-xs text-[#84cc16] font-bold">{licenseFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
+                      <span className="text-xs font-medium">Tap to upload License</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Carte Grise Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Vehicle Registration (Carte Grise)</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="cg-upload"
+                  onChange={(e) => setCarteGriseFile(e.target.files?.[0] || null)}
+                />
+                <label
+                  htmlFor="cg-upload"
+                  className={cn(
+                    "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
+                    carteGriseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
+                  )}
+                >
+                  {carteGriseFile ? (
+                    <div className="text-center">
+                      <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
+                      <span className="text-xs text-[#84cc16] font-bold">{carteGriseFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
+                      <span className="text-xs font-medium">Tap to upload Card</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            <Button
+              className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 text-lg shadow-lg shadow-lime-500/20 mt-2"
+              onClick={handleUploadDocuments}
+              disabled={uploadingFiles}
+            >
+              {uploadingFiles ? <Loader2 className="animate-spin mr-2" /> : "Submit Documents"}
+            </Button>
+
+            <Button variant="ghost" onClick={handleLogout} className="w-full text-xs text-gray-600 hover:text-red-500">
+              Logout
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
