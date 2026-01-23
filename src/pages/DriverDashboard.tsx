@@ -234,11 +234,14 @@ const DriverDashboard = () => {
         setUserId(user.id);
 
         // 1. CHECK DOCUMENTS / VERIFICATION
+        // URGENT FREE MODE: Allow everyone. Ignore is_verified.
+        /* 
         if (!user.is_verified) {
           setIsVerified(false);
           setDocumentsSubmitted(user.documents_submitted || false);
           return;
-        }
+        } 
+        */
 
         // 2. CHECK SUBSCRIPTION (New Logic)
         // If subscription_end_date is null OR in the past, they are NOT verified (payment needed).
