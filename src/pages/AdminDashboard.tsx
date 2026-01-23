@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { LogOut, Search, ShieldCheck, CheckCircle, XCircle, Trash2, User, Car } from "lucide-react";
+import { LogOut, Search, ShieldCheck, CheckCircle, XCircle, Trash2, User, Car, Filter, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { DriverDetailDrawer } from "@/components/admin/DriverDetailDrawer";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [filterRole, setFilterRole] = useState<"all" | "driver" | "customer">("driver");
+
+    // CRM State
+    const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
+    const [showPendingOnly, setShowPendingOnly] = useState(false);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -56,51 +59,30 @@ const AdminDashboard = () => {
         navigate("/admin");
     };
 
-    const toggleVerification = async (id: string, currentStatus: boolean) => {
-        try {
-            const newStatus = !currentStatus;
+    // Filter Logic
+    const filteredUsers = users.filter(user => {
+        // 1. Base Filter: Must be Driver
+        if (user.role !== 'driver') return false;
 
-            let updates: any = { is_verified: newStatus };
+        // 2. Search Filter
+        const matchesSearch = (
+            user.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+            user.phone?.includes(search) ||
+            user.email?.toLowerCase().includes(search.toLowerCase())
+        );
 
-            if (newStatus) {
-                // ACTIVATING: Grant 30 days subscription
-                const nextMonth = new Date();
-                nextMonth.setDate(nextMonth.getDate() + 30);
-                updates.subscription_end_date = nextMonth.toISOString();
-            }
-            // IF DEACTIVATING: Do NOT wipe docs. Just is_verified = false.
-            // This allows them to stay "Submitted" but "Inactive" (unpaid).
-
-            const { error } = await supabase.from('users').update(updates).eq('id', id);
-
-            if (error) throw error;
-
-            // Update local state
-            setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u));
-
-            toast({
-                title: newStatus ? "Driver Activated (30 Days)" : "Driver Deactivated",
-                description: newStatus ? "Subscription granted." : "Driver stopped (Unpaid). Documents kept.",
-                variant: newStatus ? "default" : "destructive"
-            });
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+        // 3. Pending Filter (Action Center)
+        // Pending = Needs Action = submitted docs but not verified yet.
+        // Or if they are verified, we don't show them in "Pending Only" mode.
+        if (showPendingOnly) {
+            return matchesSearch && (!user.is_verified && user.documents_submitted);
         }
-    };
 
-    const resetSystem = async () => {
-        if (!confirm("RESET ALL DRIVERS? They will need to re-upload documents.")) return;
-        try {
-            const { error } = await supabase.from('users')
-                .update({ is_verified: false, documents_submitted: false, driving_license_url: null, carte_grise_url: null })
-                .eq('role', 'driver');
-            if (error) throw error;
-            fetchUsers(); // Refresh
-            toast({ title: "System Reset", description: "All drivers deactivated." });
-        } catch (error) {
-            toast({ title: "Error", variant: "destructive" });
-        }
-    };
+        return matchesSearch;
+    });
+
+    // Helper for Pending Count
+    const pendingCount = users.filter(u => u.role === 'driver' && !u.is_verified && u.documents_submitted).length;
 
     // Helper to calculate days left
     const getDaysLeft = (dateStr: string | null) => {
@@ -112,16 +94,21 @@ const AdminDashboard = () => {
         return Math.ceil(diff / (1000 * 60 * 60 * 24));
     };
 
-    // Filter Logic
-    const filteredUsers = users.filter(user => {
-        const matchesSearch = (
-            user.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-            user.phone?.includes(search) ||
-            user.email?.toLowerCase().includes(search.toLowerCase())
-        );
-        const matchesRole = filterRole === "all" || user.role === filterRole;
-        return matchesSearch && matchesRole;
-    });
+    const resetSystem = async () => {
+        if (!confirm("RESET SYSTEM?\nThis will Unverify EVERYONE and wipe their subscription dates.\n(Docs will be kept).")) return;
+        try {
+            // Updated reset logic: Unverify, Clear Sub, Keep Docs (as per CRM transition)
+            const { error } = await supabase.from('users')
+                .update({ is_verified: false, subscription_end_date: null })
+                .eq('role', 'driver');
+
+            if (error) throw error;
+            fetchUsers();
+            toast({ title: "System Reset", description: "All drivers set to Inactive (Free Mode)." });
+        } catch (error) {
+            toast({ title: "Error", variant: "destructive" });
+        }
+    };
 
     return (
         <div className="min-h-screen bg-black text-white font-sans">
@@ -129,68 +116,95 @@ const AdminDashboard = () => {
             <header className="bg-[#111] border-b border-[#333] p-4 flex justify-between items-center sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="text-green-500" />
-                    <h1 className="font-bold text-lg">Admin Control</h1>
+                    <div>
+                        <h1 className="font-bold text-lg leading-tight">Operations Center</h1>
+                        <p className="text-[10px] text-gray-500">Taxi DZ Admin</p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={resetSystem}>
-                        <XCircle className="w-4 h-4 mr-1" /> Reset All
+                    <Button variant="destructive" size="sm" onClick={resetSystem} className="text-white border-[#444] bg-red-900/20 hover:bg-red-900/40">
+                        <Trash2 className="w-4 h-4 mr-1" /> Reset
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleLogout} className="text-white border-[#444]">
+                    <Button variant="outline" size="sm" onClick={handleLogout} className="text-white border-[#444] hover:bg-[#222]">
                         <LogOut className="w-4 h-4 mr-1" /> Logout
                     </Button>
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="p-4 max-w-7xl mx-auto space-y-4">
+            {/* Action Center Bar */}
+            <div className="bg-[#0f0f0f] border-b border-[#333] p-4">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 justify-between items-center">
 
-                {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-4 justify-between bg-[#111] p-4 rounded-lg border border-[#333]">
-                    <div className="flex gap-2 items-center">
-                        <div className="bg-green-900/20 text-green-500 px-3 py-1 rounded-md border border-green-900/50 flex items-center gap-2">
-                            <Car className="w-4 h-4" />
-                            <span className="font-bold">Total Drivers: {filteredUsers.length}</span>
-                        </div>
+                    {/* KPI / Filter Toggles */}
+                    <div className="flex gap-4 w-full md:w-auto overflow-x-auto">
+                        <button
+                            onClick={() => setShowPendingOnly(false)}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${!showPendingOnly ? 'bg-[#222] border-green-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                        >
+                            <span className="text-xs text-gray-500">All Drivers</span>
+                            <span className="text-xl font-bold text-white">{users.filter(u => u.role === 'driver').length}</span>
+                        </button>
+
+                        <button
+                            onClick={() => setShowPendingOnly(true)}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showPendingOnly ? 'bg-[#2a1a1a] border-red-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                        >
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                Pending {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+                            </span>
+                            <span className="text-xl font-bold text-white">{pendingCount}</span>
+                        </button>
                     </div>
-                    <div className="relative w-full md:w-64">
+
+                    {/* Search */}
+                    <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
-                            placeholder="Search name, phone..."
+                            placeholder="Search drivers..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="bg-[#222] border-[#444] text-white pl-10"
+                            className="bg-[#111] border-[#333] text-white pl-10 focus:border-green-500 transition-colors"
                         />
                     </div>
                 </div>
+            </div>
 
-                {/* Table */}
-                <div className="rounded-lg border border-[#333] overflow-hidden">
+            {/* Content */}
+            <main className="p-4 max-w-7xl mx-auto">
+                <div className="rounded-lg border border-[#333] overflow-hidden bg-[#111]">
                     <Table>
                         <TableHeader className="bg-[#1A1A1A]">
-                            <TableRow className="border-[#333]">
-                                <TableHead className="text-gray-400">User</TableHead>
-                                <TableHead className="text-gray-400">Role</TableHead>
-                                <TableHead className="text-gray-400">Sub (Days)</TableHead>
-                                <TableHead className="text-gray-400">Vehicle / Docs</TableHead>
+                            <TableRow className="border-[#333] hover:bg-[#1A1A1A]">
+                                <TableHead className="text-gray-400 w-[300px]">Driver</TableHead>
                                 <TableHead className="text-gray-400">Status</TableHead>
-                                <TableHead className="text-right text-gray-400">Action</TableHead>
+                                <TableHead className="text-gray-400">Subscription</TableHead>
+                                <TableHead className="text-gray-400">Vehicle</TableHead>
+                                <TableHead className="text-gray-400 text-right">Joined</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">Loading...</TableCell>
+                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
+                                        Loading Operations Center...
+                                    </TableCell>
                                 </TableRow>
                             ) : filteredUsers.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">No users found.</TableCell>
+                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
+                                        No drivers found in this view.
+                                    </TableCell>
                                 </TableRow>
                             ) : (
                                 filteredUsers.map(user => (
-                                    <TableRow key={user.id} className="border-[#333] hover:bg-[#1A1A1A]">
+                                    <TableRow
+                                        key={user.id}
+                                        className="border-[#333] hover:bg-[#222] cursor-pointer group transition-colors"
+                                        onClick={() => setSelectedDriver(user)}
+                                    >
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center overflow-hidden">
+                                                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border border-gray-700 group-hover:border-gray-500 transition-colors">
                                                     {user.profile_image ? (
                                                         <img src={user.profile_image} className="w-full h-full object-cover" />
                                                     ) : (
@@ -198,68 +212,43 @@ const AdminDashboard = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold">{user.full_name || "No Name"}</p>
-                                                    <p className="text-xs text-gray-400">{user.phone}</p>
+                                                    <p className="font-bold text-sm group-hover:text-green-400 transition-colors">{user.full_name || "Unknown Driver"}</p>
+                                                    <p className="text-xs text-gray-500">{user.phone}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className="capitalize border-[#444] text-gray-300">
-                                                {user.role}
-                                            </Badge>
+                                            {user.is_verified ? (
+                                                <Badge className="bg-green-900/30 text-green-400 border-green-900 hover:bg-green-900/50">
+                                                    Active
+                                                </Badge>
+                                            ) : user.documents_submitted ? (
+                                                <Badge className="bg-yellow-900/30 text-yellow-400 border-yellow-900 hover:bg-yellow-900/50 animate-pulse">
+                                                    Needs Approval
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="border-[#444] text-gray-500" title="Free Entry / Inactive">
+                                                    {user.subscription_end_date ? "Unknown" : "Free Ent."}
+                                                </Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {user.role === 'driver' && (
                                                 <div className="flex flex-col">
-                                                    <span className={`text-sm font-mono ${getDaysLeft(user.subscription_end_date) > 5 ? "text-green-400" : "text-red-400"}`}>
-                                                        {getDaysLeft(user.subscription_end_date)} Days
-                                                    </span>
-                                                    <span className="text-[10px] text-gray-500">
-                                                        {user.subscription_end_date ? new Date(user.subscription_end_date).toLocaleDateString() : "-"}
+                                                    <span className={`text-sm font-mono ${getDaysLeft(user.subscription_end_date) > 5 ? "text-green-400" : "text-gray-500"}`}>
+                                                        {user.subscription_end_date ? `${getDaysLeft(user.subscription_end_date)} Days` : "No Sub (Free)"}
                                                     </span>
                                                 </div>
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {user.role === 'driver' ? (
-                                                <div className="space-y-1">
-                                                    <p className="text-xs text-gray-400">{user.car_model} • {user.license_plate}</p>
-                                                    <div className="flex gap-2">
-                                                        {user.driving_license_url && (
-                                                            <Dialog>
-                                                                <DialogTrigger><span className="text-[10px] bg-[#222] px-2 py-1 rounded border border-[#444] cursor-pointer hover:border-green-500">License</span></DialogTrigger>
-                                                                <DialogContent className="bg-black border-[#333] p-0"><img src={user.driving_license_url} className="w-full" /></DialogContent>
-                                                            </Dialog>
-                                                        )}
-                                                        {user.carte_grise_url && (
-                                                            <Dialog>
-                                                                <DialogTrigger><span className="text-[10px] bg-[#222] px-2 py-1 rounded border border-[#444] cursor-pointer hover:border-green-500">Car Doc</span></DialogTrigger>
-                                                                <DialogContent className="bg-black border-[#333] p-0"><img src={user.carte_grise_url} className="w-full" /></DialogContent>
-                                                            </Dialog>
-                                                        )}
-                                                        {!user.driving_license_url && !user.carte_grise_url && <span className="text-[10px] text-red-500">No Docs</span>}
-                                                    </div>
-                                                </div>
-                                            ) : <span className="text-gray-600">-</span>}
+                                            <div className="text-sm text-gray-300">
+                                                {user.car_model || "-"}
+                                                <span className="text-xs text-gray-500 block">{user.license_plate}</span>
+                                            </div>
                                         </TableCell>
-                                        <TableCell>
-                                            {user.is_verified ? (
-                                                <Badge className="bg-green-900/40 text-green-400 border-green-900">Verified</Badge>
-                                            ) : (
-                                                <Badge className="bg-red-900/40 text-red-400 border-red-900">Pending</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {user.role === 'driver' && (
-                                                <Button
-                                                    size="sm"
-                                                    variant={user.is_verified ? "destructive" : "default"}
-                                                    className={user.is_verified ? "h-8" : "bg-green-600 h-8"}
-                                                    onClick={() => toggleVerification(user.id, user.is_verified)}
-                                                >
-                                                    {user.is_verified ? "Unverify" : "Verify"}
-                                                </Button>
-                                            )}
+                                        <TableCell className="text-right text-xs text-gray-500">
+                                            {new Date(user.created_at).toLocaleDateString()}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -268,6 +257,14 @@ const AdminDashboard = () => {
                     </Table>
                 </div>
             </main>
+
+            {/* Slider Drawer */}
+            <DriverDetailDrawer
+                driver={selectedDriver}
+                open={!!selectedDriver}
+                onClose={() => setSelectedDriver(null)}
+                onUpdate={fetchUsers}
+            />
         </div>
     );
 };
