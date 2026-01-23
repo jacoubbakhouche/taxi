@@ -200,7 +200,7 @@ const DriverDashboard = () => {
         const result = await supabase
           .from('users')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('auth_id', session.user.id) // Query by auth_id (Foreign Key)
           .maybeSingle();
 
         if (!result.error && result.data) {
@@ -213,9 +213,12 @@ const DriverDashboard = () => {
 
         userError = result.error;
         if (!result.data && !result.error) {
-          // Not found but no error (maybeSingle returned null)
-          // Treat as error for now or loop
-          userError = { message: "User profile not found", code: "PGRST116" };
+          // Not found. Since RLS ensures we can only see our own data, likely the row doesn't exist.
+          // Per user request: DO NOT CREATE. Show Error.
+          userError = { message: "User profile not found in database.", code: "NO_PROFILE_ROW" };
+          // Don't retry immediately if it's missing, unless we want to wait for backend creation latency?
+          // But user says "Problem is wrong query". We fixed the query. 
+          // If still missing, it's a real error.
         }
 
         if (userError?.code === 'PGRST116') {
@@ -228,31 +231,30 @@ const DriverDashboard = () => {
 
       if (userError || !user) {
         console.error("User profile fetch error:", userError);
-        // User authenticated but profile missing/error.
-        // Show Toast and Redirect/Logout option.
         toast({
-          title: "Access Error",
-          description: "Your profile could not be loaded.",
+          title: "Account Error",
+          description: "Your account data is missing. Please contact support.",
           variant: "destructive",
           action: (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => { supabase.auth.signOut(); navigate("/"); }}>
                 Log Out
               </Button>
-              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-                Retry
-              </Button>
             </div>
           )
         });
 
-        // Don't show "Upload Docs" (which happens if we just setVerified(false)).
-        // Instead, stay in loading or just return?
-        // If we return, the UI stays blank. 
-        // Let's set verified=false BUT maybe show a clean error?
-        // Handled by generic error boundary? No.
-        setIsVerified(false);
-        return;
+        // Show Full Screen Error instead of Verification Screen to avoid confusion
+        return (
+          <div className="h-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center">
+            <ShieldCheck className="w-16 h-16 text-red-500 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Account Error</h2>
+            <p className="text-gray-400 mb-8">We could not load your driver profile.</p>
+            <Button variant="destructive" onClick={() => { supabase.auth.signOut(); navigate("/"); }}>
+              Sign Out & Retry
+            </Button>
+          </div>
+        );
       }
 
       if (user) {
@@ -806,6 +808,9 @@ const DriverDashboard = () => {
             <p className="text-sm text-gray-500 mb-6">This usually takes 1-24 hours</p>
             <Button variant="outline" className="w-full border-[#333] hover:bg-[#222] text-white" onClick={() => window.location.reload()}>
               Check Status
+            </Button>
+            <Button variant="ghost" onClick={handleLogout} className="w-full mt-2 text-xs text-gray-600 hover:text-red-500">
+              Logout
             </Button>
           </div>
         ) : (

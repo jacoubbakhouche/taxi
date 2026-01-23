@@ -96,10 +96,18 @@ const AdminAuth = () => {
                         <Button className="w-full" type="submit" disabled={loading}>
                             {loading ? <Loader2 className="animate-spin mr-2" /> : "Secure Login"}
                         </Button>
+                        <Button
+                            variant="link"
+                            type="button" // Important so it doesn't submit
+                            className="w-full text-xs text-gray-400 hover:text-white mt-4"
+                            onClick={() => navigate("/")}
+                        >
+                            ← Back to Home / Other Login
+                        </Button>
                     </form>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 };
 
