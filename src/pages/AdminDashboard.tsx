@@ -24,16 +24,23 @@ const AdminDashboard = () => {
 
     const fetchDrivers = async () => {
         try {
+            console.log("Fetching drivers...");
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('role', 'driver')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase Error:", error);
+                toast({ title: "Error Fetching Data", description: error.message, variant: "destructive" });
+                throw error;
+            }
+
+            console.log("Drivers loaded:", data?.length);
             setDrivers(data || []);
         } catch (error) {
-            console.error("Error fetching drivers:", error);
+            console.error("Fetch failed:", error);
         } finally {
             setLoading(false);
         }
@@ -64,24 +71,37 @@ const AdminDashboard = () => {
     };
 
     const deactivateAllDrivers = async () => {
-        if (!window.confirm("ARE YOU SURE? This will deactivate ALL drivers immediately.")) return;
+        if (!window.confirm("ARE YOU SURE? This will deactivate ALL drivers and force them to re-upload documents.")) return;
 
         try {
             const { error } = await supabase
                 .from('users')
-                .update({ is_verified: false })
+                .update({
+                    is_verified: false,
+                    documents_submitted: false,
+                    driving_license_url: null,
+                    carte_grise_url: null
+                })
                 .eq('role', 'driver');
 
             if (error) throw error;
 
-            setDrivers(drivers.map(d => ({ ...d, is_verified: false })));
+            // Update local state to reflect the "fresh" state
+            setDrivers(drivers.map(d => ({
+                ...d,
+                is_verified: false,
+                documents_submitted: false,
+                driving_license_url: null,
+                carte_grise_url: null
+            })));
 
             toast({
                 title: "System Reset ⚠️",
-                description: "All drivers have been deactivated.",
+                description: "All drivers reset. They must re-upload documents.",
                 variant: "destructive"
             });
         } catch (error) {
+            console.error(error);
             toast({ title: "Error", description: "Failed to reset drivers", variant: "destructive" });
         }
     };
@@ -122,41 +142,9 @@ const AdminDashboard = () => {
         navigate("/admin");
     };
 
-    // Helper to get signed URL for viewing private files
-    const getSignedUrl = async (path: string | null) => {
-        if (!path) return null;
-        try {
-            let filePath = path;
-            if (path.includes("driver_documents/")) {
-                filePath = path.split("driver_documents/")[1];
-            } else if (path.includes("public/")) {
-                // Try to strip standard supabase path structure if needed
-                // e.g. .../storage/v1/object/public/driver_documents/...
-                const parts = path.split("driver_documents/");
-                if (parts.length > 1) filePath = parts[1];
-            }
-
-            // Remove any URL params if they exist
-            filePath = filePath.split("?")[0];
-
-            const { data, error } = await supabase.storage
-                .from('driver_documents')
-                .createSignedUrl(filePath, 60 * 60); // 1 hour validity
-
-            if (error) {
-                console.error("Error signing URL:", error);
-                return path;
-            }
-            return data.signedUrl;
-        } catch (e) {
-            return path;
-        }
-    };
-
-    const handleViewDocument = async (url: string | null) => {
+    const handleViewDocument = (url: string | null) => {
         if (!url) return;
-        const signed = await getSignedUrl(url);
-        setSelectedImage(signed);
+        setSelectedImage(url);
     };
 
     const filteredDrivers = drivers.filter(d =>
