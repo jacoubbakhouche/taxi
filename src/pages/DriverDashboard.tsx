@@ -277,22 +277,44 @@ const DriverDashboard = () => {
 
 
   const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setDriverLocation([position.coords.latitude, position.coords.longitude]);
-          setLocationKey(prev => prev + 1); // Force map re-center
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          toast({
-            title: "تنبيه",
-            description: "تأكد من تفعيل خدمة الموقع الجغرافي",
-            variant: "destructive",
-          });
-        }
-      );
+    if (!navigator.geolocation) {
+      toast({ title: "GPS Error", description: "Browser does not support Geolocation", variant: "destructive" });
+      return;
     }
+
+    // Set timeout to force fallback if GPS hangs
+    const timeoutId = setTimeout(() => {
+      console.warn("GPS Request Timed Out - Using Fallback");
+      setDriverLocation([36.9009, 7.7669]); // Fallback: Annaba
+      setLocationKey(prev => prev + 1);
+      toast({
+        title: "GPS Weak",
+        description: "Could not get precise location. Using default location (Annaba).",
+        variant: "default"
+      });
+    }, 5000);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timeoutId); // Cancel timeout if successful
+        setDriverLocation([position.coords.latitude, position.coords.longitude]);
+        setLocationKey(prev => prev + 1);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        console.error("Error getting location:", error);
+        // Fallback on error too
+        setDriverLocation([36.9009, 7.7669]);
+        setLocationKey(prev => prev + 1);
+
+        toast({
+          title: "تنبيه",
+          description: "تم استخدام موقع افتراضي (عنابة) بسبب ضعف الإشارة.",
+          variant: "destructive",
+        });
+      },
+      { timeout: 5000, enableHighAccuracy: true } // Native timeout
+    );
   };
 
   const handleUploadDocuments = async () => {
