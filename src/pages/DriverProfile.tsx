@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Star, Phone, Edit2, Save, X, MapPin, Car, DollarSign, Clock } from "lucide-react";
+import { ArrowLeft, User, Star, Phone, Edit2, Save, X, MapPin, Car, DollarSign, Clock, Award } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -18,8 +18,7 @@ interface UserProfile {
   total_rides: number;
   vehicle_type?: string;
   car_model?: string;
-  vehicle_color?: string;
-  vehicle_class?: string;
+  license_plate?: string;
 }
 
 interface Ride {
@@ -46,8 +45,7 @@ const DriverProfile = () => {
   const [editImage, setEditImage] = useState("");
   const [editVehicleType, setEditVehicleType] = useState("");
   const [editCarModel, setEditCarModel] = useState("");
-  const [editVehicleColor, setEditVehicleColor] = useState("");
-  const [editVehicleClass, setEditVehicleClass] = useState("standard");
+  const [editLicensePlate, setEditLicensePlate] = useState("");
   const [totalEarnings, setTotalEarnings] = useState(0);
 
   useEffect(() => {
@@ -76,8 +74,7 @@ const DriverProfile = () => {
       setEditImage(user.profile_image || "");
       setEditVehicleType(user.vehicle_type || "");
       setEditCarModel(user.car_model || "");
-      setEditVehicleColor(user.vehicle_color || "");
-      setEditVehicleClass(user.vehicle_class || "standard");
+      setEditLicensePlate(user.license_plate || "");
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -132,8 +129,7 @@ const DriverProfile = () => {
           profile_image: editImage || null,
           vehicle_type: editVehicleType || null,
           car_model: editCarModel || null,
-          vehicle_color: editVehicleColor || null,
-          vehicle_class: editVehicleClass || 'standard',
+          license_plate: editLicensePlate || null,
         })
         .eq("id", profile.id);
 
@@ -145,8 +141,6 @@ const DriverProfile = () => {
         profile_image: editImage || null,
         vehicle_type: editVehicleType || null,
         car_model: editCarModel || null,
-        vehicle_color: editVehicleColor || null,
-        vehicle_class: editVehicleClass || 'standard',
       });
       setEditing(false);
       toast({
@@ -154,9 +148,10 @@ const DriverProfile = () => {
         description: "تم حفظ التعديلات بنجاح",
       });
     } catch (error: any) {
+      console.error("Save error details:", error);
       toast({
         title: "خطأ",
-        description: "فشل حفظ التعديلات",
+        description: `فشل حفظ التعديلات: ${error.message || "خطأ غير معروف"}`,
         variant: "destructive",
       });
     }
@@ -234,253 +229,244 @@ const DriverProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#84cc16] via-[#84cc16]/80 to-[#1A1A1A] p-6 pb-20 border-b border-white/5">
-        <div className="flex items-center justify-between mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/driver/dashboard")}
-            className="text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          {!editing ? (
+      {/* Header */}
+      <div className="bg-[#1A1A1A] pb-12 rounded-b-[3rem] shadow-2xl relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#84cc16] blur-[100px] rounded-full"></div>
+          <div className="absolute top-1/2 -left-24 w-72 h-72 bg-blue-500 blur-[100px] rounded-full"></div>
+        </div>
+
+        <div className="p-6 relative z-10">
+          <div className="flex items-center justify-between mb-8">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setEditing(true)}
-              className="text-white hover:bg-white/20"
+              onClick={() => navigate("/driver/dashboard")}
+              className="text-white hover:bg-white/10 rounded-full"
             >
-              <Edit2 className="w-5 h-5" />
+              <ArrowLeft className="w-6 h-6" />
             </Button>
-          ) : (
-            <div className="flex gap-2">
+            {!editing ? (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setEditing(false)}
-                className="text-white hover:bg-white/20"
+                onClick={() => setEditing(true)}
+                className="text-white hover:bg-white/10 rounded-full"
               >
-                <X className="w-5 h-5" />
+                <Edit2 className="w-5 h-5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSaveProfile}
-                className="text-white hover:bg-white/20"
-              >
-                <Save className="w-5 h-5" />
-              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditing(false)}
+                  className="text-white hover:bg-white/10 rounded-full"
+                >
+                  <X className="w-6 h-6" />
+                </Button>
+                <Button
+                  size="icon"
+                  onClick={handleSaveProfile}
+                  className="bg-[#84cc16] hover:bg-[#84cc16]/90 text-black rounded-full shadow-[0_0_15px_rgba(132,204,22,0.5)]"
+                >
+                  <Save className="w-5 h-5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center">
+            {/* Avatar Section */}
+            <div className="relative mb-6 group">
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#84cc16] to-blue-500 rounded-full blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
+              <Avatar className="w-32 h-32 border-4 border-[#1A1A1A] relative shadow-2xl">
+                <AvatarImage src={editImage || profile.profile_image || undefined} className="object-cover" />
+                <AvatarFallback className="bg-[#2a2a2a] text-white text-4xl">
+                  {profile.full_name?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              {editing && (
+                <button
+                  onClick={() => document.getElementById('driver-file-upload')?.click()}
+                  className="absolute bottom-0 right-0 bg-[#84cc16] text-black p-2 rounded-full shadow-lg hover:scale-110 transition-transform"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              )}
+              <input
+                id="driver-file-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const fileExt = file.name.split('.').pop();
+                    const filePath = `${Math.random()}.${fileExt}`;
+                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+                    if (uploadError) throw uploadError;
+                    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+                    setEditImage(data.publicUrl);
+                    toast({ title: "تم رفع الصورة بنجاح" });
+                  } catch (error) {
+                    toast({ title: "failed to upload", variant: "destructive" });
+                  }
+                }}
+              />
             </div>
-          )}
-        </div>
 
-        <div className="text-center text-white">
-          <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
-            <AvatarImage src={editImage || profile.profile_image || undefined} className="object-cover" />
-            <AvatarFallback className="bg-white text-primary text-2xl">
-              <Car className="w-12 h-12" />
-            </AvatarFallback>
-          </Avatar>
+            {/* Name & Stats */}
+            {!editing ? (
+              <div className="text-center space-y-2 animate-in slide-in-from-bottom-5 duration-500">
+                <h1 className="text-3xl font-bold text-white tracking-tight">{profile.full_name}</h1>
+                <div className="flex items-center justify-center gap-2 text-gray-400">
+                  <Phone className="w-4 h-4" />
+                  <span className="text-sm font-mono tracking-wider">{profile.phone}</span>
+                </div>
 
-
-          {editing ? (
-            <div className="mt-4 space-y-4 w-full max-w-md mx-auto">
+                {/* Vehicle Badge */}
+                {profile.vehicle_type && (
+                  <div className="mt-4 inline-flex items-center gap-2 bg-[#2a2a2a] pl-4 pr-3 py-1.5 rounded-full border border-white/5">
+                    <span className="text-xs text-gray-400 uppercase tracking-widest font-bold">DRIVER</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#84cc16]"></span>
+                    <span className="text-[#84cc16] font-bold text-sm">
+                      {profile.vehicle_type === 'taxi_owner' && 'مالك طاكسي'}
+                      {profile.vehicle_type === 'taxi_rent' && 'سائق طاكسي'}
+                      {profile.vehicle_type === 'vtc' && 'سائق خاص'}
+                      {profile.vehicle_type === 'delivery' && 'توصيل'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="text-center bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                className="text-center text-xl font-bold bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12 w-3/4 rounded-xl backdrop-blur-sm"
                 placeholder="الاسم الكامل"
+                dir="rtl"
               />
-              <div className="grid grid-cols-2 gap-2">
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="px-6 -mt-8 relative z-20 space-y-6">
+
+        {/* Stats Grid */}
+        {!editing && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-1">
+                <Car className="w-5 h-5 text-blue-500" />
+              </div>
+              <p className="text-2xl font-bold text-white">{completedRides}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Rides</p>
+            </div>
+
+            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
+              <div className="w-10 h-10 rounded-full bg-[#84cc16]/10 flex items-center justify-center mb-1">
+                <Star className="w-5 h-5 text-[#84cc16]" />
+              </div>
+              <p className="text-2xl font-bold text-white">{profile.rating.toFixed(1)}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Rating</p>
+            </div>
+
+            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-1">
+                <DollarSign className="w-5 h-5 text-purple-500" />
+              </div>
+              <p className="text-lg font-bold text-white whitespace-nowrap">{totalEarnings > 1000 ? (totalEarnings / 1000).toFixed(1) + 'k' : totalEarnings}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Earned</p>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Form or Info View */}
+        {editing ? (
+          <div className="space-y-6 animate-in slide-in-from-bottom-10 duration-500">
+            {/* Vehicle Info Card */}
+            <div className="bg-[#1A1A1A] p-5 rounded-3xl border border-white/5 shadow-xl space-y-4">
+              <h3 className="text-[#84cc16] font-bold text-lg flex items-center gap-2 justify-end">
+                <span>بيانات المركبة</span>
+                <Car className="w-5 h-5" />
+              </h3>
+
+              <div className="space-y-1 text-right">
+                <label className="text-xs text-gray-500 pr-1">طراز السيارة</label>
                 <Input
                   value={editCarModel}
                   onChange={(e) => setEditCarModel(e.target.value)}
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
-                  placeholder="طراز السيارة (مثلاً Toyota)"
+                  className="bg-[#252525] border-transparent text-white text-right h-12 rounded-xl focus:border-[#84cc16]/50 transition-colors"
+                  placeholder="مثلاً: Symbol 2022"
                 />
+              </div>
+
+              <div className="space-y-1 text-right">
+                <label className="text-xs text-gray-500 pr-1">رقم اللوحة</label>
                 <Input
-                  value={editVehicleColor}
-                  onChange={(e) => setEditVehicleColor(e.target.value)}
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
-                  placeholder="لون السيارة"
+                  value={editLicensePlate}
+                  onChange={(e) => setEditLicensePlate(e.target.value)}
+                  className="bg-[#252525] border-transparent text-white text-center font-mono h-12 rounded-xl focus:border-[#84cc16]/50"
+                  placeholder="00000-116-16"
                 />
               </div>
+            </div>
 
-              {/* Vehicle Class Selector with 3D Images */}
-              <div className="space-y-4 text-right">
-                <label className="text-white text-sm font-bold block px-1">اختر مركبتك (3D)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'economy', label: 'اقتصادية', img: '/cars/economy.png' },
-                    { id: 'standard', label: 'عادية', img: '/cars/standard.png' },
-                    { id: 'taxi', label: 'طاكسي', img: '/cars/taxi.png' },
-                    { id: 'luxury', label: 'فاخرة', img: '/cars/luxury.png' },
-                    { id: 'suv', label: 'عائلية', img: '/cars/suv.png' },
-                  ].map((cls) => (
-                    <div
-                      key={cls.id}
-                      onClick={() => setEditVehicleClass(cls.id)}
-                      className={`relative overflow-hidden cursor-pointer rounded-xl border-2 transition-all duration-300 ${editVehicleClass === cls.id
-                          ? 'bg-[#84cc16]/20 border-[#84cc16] shadow-[0_0_20px_rgba(245,216,72,0.3)]'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
-                        }`}
-                    >
-                      <div className="p-2 z-10 relative">
-                        <span className={`text-xs font-bold ${editVehicleClass === cls.id ? 'text-[#84cc16]' : 'text-white'}`}>
-                          {cls.label}
-                        </span>
-                      </div>
-                      <div className="w-full h-24 flex items-center justify-center p-2">
-                        <img
-                          src={cls.img}
-                          alt={cls.label}
-                          className="w-full h-full object-contain drop-shadow-xl transform hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Work Type Card */}
+            <div className="bg-[#1A1A1A] p-5 rounded-3xl border border-white/5 shadow-xl space-y-4">
+              <h3 className="text-[#84cc16] font-bold text-lg flex items-center gap-2 justify-end">
+                <span>نوع العمل</span>
+                <Award className="w-5 h-5" />
+              </h3>
 
-              <div className="space-y-2 text-right">
-                <label className="text-white text-sm font-bold block mb-2 px-1">نوع العمل</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'taxi_owner', label: 'مالك طاكسي', icon: '🚕', desc: 'سيارة صفراء (رخصة)' },
-                    { id: 'taxi_rent', label: 'يعمل عند طاكسي', icon: '🔑', desc: 'سائق باليومية' },
-                    { id: 'vtc', label: 'سيارة سياحية', icon: '🚙', desc: 'نقل عبر التطبيقات' },
-                    { id: 'delivery', label: 'توصيل طلبات', icon: '📦', desc: 'دراجة أو سيارة' },
-                  ].map((type) => (
-                    <div
-                      key={type.id}
-                      onClick={() => setEditVehicleType(type.id)}
-                      className={`cursor-pointer rounded-xl p-3 border-2 transition-all ${editVehicleType === type.id
-                        ? 'bg-[#84cc16] border-[#84cc16] text-black'
-                        : 'bg-white/10 border-white/10 text-white hover:bg-white/20'
-                        }`}
-                    >
-                      <div className="text-2xl mb-1">{type.icon}</div>
-                      <div className="font-bold text-sm">{type.label}</div>
-                      <div className={`text-[10px] ${editVehicleType === type.id ? 'text-black/70' : 'text-gray-400'}`}>
+              <div className="grid grid-cols-2 gap-3" dir="rtl">
+                {[
+                  { id: 'taxi_owner', label: 'مالك طاكسي', icon: '🚕', desc: 'دفتر مقاعد + رخصة' },
+                  { id: 'taxi_rent', label: 'سائق طاكسي', icon: '🔑', desc: 'يعمل عند الغير' },
+                  { id: 'vtc', label: 'سائق خاص', icon: '🚙', desc: 'Yassir / Heetch' },
+                ].map((type) => (
+                  <div
+                    key={type.id}
+                    onClick={() => setEditVehicleType(type.id)}
+                    className={`cursor-pointer rounded-2xl p-4 border transition-all duration-300 relative overflow-hidden group ${editVehicleType === type.id
+                      ? 'bg-[#84cc16] border-[#84cc16] text-black shadow-[0_0_20px_rgba(132,204,22,0.3)]'
+                      : 'bg-[#252525] border-transparent text-white hover:bg-[#333]'
+                      }`}
+                  >
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                      <span className="text-3xl mb-2">{type.icon}</span>
+                      <span className="font-bold text-sm">{type.label}</span>
+                      <span className={`text-[10px] mt-1 ${editVehicleType === type.id ? 'text-black/70' : 'text-gray-500'}`}>
                         {type.desc}
-                      </div>
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full bg-[#84cc16] text-black hover:bg-[#84cc16]/90"
-                  onClick={() => document.getElementById('driver-file-upload')?.click()}
-                  disabled={loading}
-                >
-                  تغيير الصورة
-                </Button>
-                <input
-                  id="driver-file-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-
-                    try {
-                      const fileExt = file.name.split('.').pop();
-                      const filePath = `${Math.random()}.${fileExt}`;
-
-                      const { error: uploadError } = await supabase.storage
-                        .from('avatars')
-                        .upload(filePath, file);
-
-                      if (uploadError) throw uploadError;
-
-                      const { data } = supabase.storage
-                        .from('avatars')
-                        .getPublicUrl(filePath);
-
-                      setEditImage(data.publicUrl);
-                      toast({ title: "تم رفع الصورة بنجاح" });
-                    } catch (error) {
-                      toast({ title: "failed to upload", variant: "destructive" });
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Profile View Mode */}
-
-              {/* 3D Car & Avatar Combo */}
-              <div className="relative mt-8 mb-6 h-32 flex items-end justify-center">
-                {/* Car Image (Largest) */}
-                {profile.vehicle_class && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 z-10 animate-in fade-in zoom-in duration-700">
-                    <img
-                      src={`/cars/${profile.vehicle_class}.png`}
-                      onError={(e) => e.currentTarget.src = '/cars/standard.png'}
-                      alt="Vehicle"
-                      className="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
-                    />
                   </div>
-                )}
-
-                {/* Avatar (Floating Badge) */}
-                <div className="absolute -bottom-4 right-1/2 translate-x-16 z-20">
-                  <Avatar className="w-16 h-16 border-4 border-[#1A1A1A] shadow-xl">
-                    <AvatarImage src={profile.profile_image || undefined} className="object-cover" />
-                    <AvatarFallback className="bg-white text-black font-bold">
-                      {profile.full_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+                ))}
               </div>
-
-              <h1 className="text-2xl font-bold mt-6 text-white text-center drop-shadow-md">{profile.full_name}</h1>
-
-              <div className="flex items-center justify-center gap-2 mt-2">
-                {/* Display Vehicle Badge if exists */}
-                {profile.vehicle_type && (
-                  <span className="bg-[#84cc16] text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg shadow-lime-500/20">
-                    {profile.vehicle_type === 'taxi_owner' && '🚕 مالك طاكسي'}
-                    {profile.vehicle_type === 'taxi_rent' && '🔑 سائق طاكسي'}
-                    {profile.vehicle_type === 'vtc' && '🚙 سائق خاص'}
-                    {profile.vehicle_type === 'delivery' && '📦 توصيل'}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Phone className="w-4 h-4" />
-                <p className="text-white/90">{profile.phone}</p>
-              </div>
-            </>
-          )}
-
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <div>
-              <p className="text-2xl font-bold">{completedRides}</p>
-              <p className="text-xs text-white/80">رحلة مكتملة</p>
-            </div>
-            <div className="w-px h-12 bg-white/30"></div>
-            <div>
-              <div className="flex items-center gap-1 justify-center">
-                <Star className="w-4 h-4 fill-white" />
-                <p className="text-2xl font-bold">{profile.rating.toFixed(1)}</p>
-              </div>
-              <p className="text-xs text-white/80">التقييم</p>
-            </div>
-            <div className="w-px h-12 bg-white/30"></div>
-            <div>
-              <p className="text-2xl font-bold">{totalEarnings.toLocaleString()}</p>
-              <p className="text-xs text-white/80">دج الأرباح</p>
             </div>
           </div>
-        </div>
+        ) : (
+          /* View Mode Info Cards */
+          <div className="space-y-4">
+            <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-white/5 flex items-center justify-between shadow-lg">
+              <div className="text-right">
+                <p className="text-gray-500 text-xs uppercase font-bold tracking-wider mb-1">Vehicule</p>
+                <p className="text-white font-bold text-lg">{profile.car_model || "-------"}</p>
+                <div className="flex items-center justify-end gap-2 mt-1">
+                  <span className="text-xs bg-white/10 px-2 py-0.5 rounded font-mono text-gray-300">{profile.license_plate || "---"}</span>
+                </div>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-[#252525] flex items-center justify-center border border-white/10 shadow-inner">
+                <Car className="w-6 h-6 text-gray-400" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -528,8 +514,8 @@ const DriverProfile = () => {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

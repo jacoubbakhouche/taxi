@@ -327,7 +327,8 @@ const DriverDashboard = () => {
       const { data: rides, error } = await supabase
         .from('rides')
         .select('*')
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .or(`driver_id.is.null,driver_id.eq.${userId}`);
 
       if (error) {
         console.error('Error fetching pending rides:', error);

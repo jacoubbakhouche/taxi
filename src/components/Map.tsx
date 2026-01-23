@@ -149,6 +149,60 @@ async function getRoadRoute(start: [number, number], end: [number, number]) {
   }
 }
 
+
+function RecenterControl({ center, onRecenter }: { center: [number, number], onRecenter: () => void }) {
+  const map = useMap();
+  const [showButton, setShowButton] = useState(false);
+  const [isProgrammaticMove, setIsProgrammaticMove] = useState(false);
+
+  // Monitor move events to detect manual dragging
+  useMapEvents({
+    movestart: () => {
+      // If we are flying to a location, we shouldn't show the button immediately
+    },
+    moveend: () => {
+      if (!isProgrammaticMove) {
+        // Simple distance check could be added here, but for now show on any manual move
+        const mapCenter = map.getCenter();
+        const dist = Math.sqrt(Math.pow(mapCenter.lat - center[0], 2) + Math.pow(mapCenter.lng - center[1], 2));
+        if (dist > 0.001) { // Threshold to prevent showing on micro-movements
+          setShowButton(true);
+        }
+      }
+      setIsProgrammaticMove(false);
+    }
+  });
+
+  // Listen to center prop changes to hide button when parent updates location (e.g. driving mode)
+  useEffect(() => {
+    setIsProgrammaticMove(true);
+    map.flyTo(center, 15, { animate: true, duration: 1.5 });
+    setShowButton(false);
+  }, [center, map]);
+
+  const handleRecenter = () => {
+    setIsProgrammaticMove(true);
+    map.flyTo(center, 15, { animate: true, duration: 1 });
+    setShowButton(false);
+    onRecenter();
+  };
+
+  if (!showButton) return null;
+
+  return (
+    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "100px", marginRight: "16px", pointerEvents: "auto" }}>
+      <div className="leaflet-control">
+        <button
+          onClick={handleRecenter}
+          className="w-12 h-12 rounded-full bg-[#1A1A1A] border border-[#84cc16]/50 shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center hover:bg-[#252525] active:scale-95 transition-all duration-300 z-[1000] group"
+        >
+          <Navigation className="w-5 h-5 text-[#84cc16] fill-[#84cc16]/20 group-hover:rotate-45 transition-transform duration-300" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }: MapProps) => {
   const [enhancedRoute, setEnhancedRoute] = useState<[number, number][] | null>(null);
 
@@ -168,7 +222,7 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
   const displayRoute = enhancedRoute || route;
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg">
+    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg relative">
       <div style={{ height: "100%", width: "100%" }}>
         <MapContainer
           center={center}
@@ -181,7 +235,9 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
             url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
             className="dark-map-tiles"
           />
-          <MapUpdater center={center} recenterKey={recenterKey} />
+          {/* We replace simplified MapUpdater with the smarter RecenterControl */}
+          <RecenterControl center={center} onRecenter={() => { }} />
+
           {onMapClick && <MapClickHandler onClick={onMapClick} />}
           <MapMarkers markers={markers} />
           {displayRoute && displayRoute.length > 0 && (
