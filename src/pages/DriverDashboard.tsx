@@ -112,8 +112,12 @@ const DriverDashboard = () => {
           }
         }
       },
-      (error) => console.error('Error watching location:', error),
-      { enableHighAccuracy: true, maximumAge: 5000 }
+      (error) => {
+        console.warn('GPS Watch Error:', error);
+        // Do not block ui, just warn
+        if (error.code === 1) toast({ title: "GPS Permission Denied", description: "Allow location access.", variant: "destructive" });
+      },
+      { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 } // Relaxed settings
     );
 
     return () => {
