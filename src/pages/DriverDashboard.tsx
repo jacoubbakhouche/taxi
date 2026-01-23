@@ -199,7 +199,11 @@ const DriverDashboard = () => {
       for (let i = 0; i < 3; i++) {
         const result = await supabase
           .from('users')
-        if (result.data) {
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!result.error && result.data) {
           user = result.data;
           // Ensure we type check or fetch correct fields
           // @ts-ignore
@@ -218,21 +222,55 @@ const DriverDashboard = () => {
 
       if (userError) {
         console.error("User profile fetch error:", userError);
-        // ... existing error handling
-        throw userError;
+        // Don't throw immediately, let's see if we can recover or just show loading?
+        // Actually, if we can't get the user, we can't confirm verification.
+        // But throwing might cause a crash loop. 
+        // Let's set verified=false to be safe.
+        setIsVerified(false);
+        return;
       }
 
       if (user) {
-        // CHECK VERIFICATION STATUS
+        setUserId(user.id);
+
+        // 1. CHECK DOCUMENTS / VERIFICATION
         if (!user.is_verified) {
           setIsVerified(false);
-          setUserId(user.id);
           setDocumentsSubmitted(user.documents_submitted || false);
           return;
         }
 
+        // 2. CHECK SUBSCRIPTION (New Logic)
+        // If subscription_end_date is null OR in the past, they are NOT verified (payment needed).
+        // Since the Admin "Verify" button sets this date, if it's missing, they aren't fully active.
+        const now = new Date();
+        const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
+
+        if (!subEnd || subEnd < now) {
+          console.log("Subscription expired or missing:", user.subscription_end_date);
+          // Treat as Unverified so they see the "Upload/Pay" screen (or we can add a specific Pay screen later)
+          // For now, user said "Cancel activation ... until he pays", so treating as unverified is correct.
+          setIsVerified(false);
+          setDocumentsSubmitted(true); // Treat as "Docs sent but not active" -> pending/rejected view?
+          // Actually, if we want them to see "Upload" again? 
+          // The user said: "shows him upload screen".
+          // If we set documentsSubmitted=false, they see upload screen.
+          // If they are just "Expired", maybe we DO want them to contact admin?
+          // Let's stick to the Admin workflow: Admin Unverifies -> Docs Wiped (in previous logic, now reverted).
+          // NOW: Admin Unverifies -> is_verified=false.
+          // So code hits check #1 above (!user.is_verified).
+          // So we don't strictly need a separate check here IF the DB state is consistent.
+          // BUT, if the date expires automatically, we should block them.
+          setIsVerified(false);
+          // If we want them to see the "Upload" screen to re-trigger or see a message:
+          // Let's set documentsSubmitted = true so they see "Waiting Approval" or similar?
+          // User said: "Each 30 days ... cancel activation ... until he pays".
+          // If we just set isVerified=false, they go to "Waiting". Admin sees "Expired". Admin takes money. Admin clicks Verify.
+          // This seems consistent.
+          return;
+        }
+
         setIsVerified(true);
-        setUserId(user.id);
         setIsOnline(user.is_online || false);
       }
     } catch (error: any) {
