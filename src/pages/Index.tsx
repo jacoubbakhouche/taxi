@@ -18,7 +18,7 @@ const Index = () => {
       {/* Full Screen Background Image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/images/green_taxi_splash.png"
+          src="/images/cartoon_driver_splash.png?v=2"
           alt="Green Taxi City"
           className="w-full h-full object-cover animate-in fade-in duration-1000"
         />

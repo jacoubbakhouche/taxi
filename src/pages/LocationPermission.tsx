@@ -31,7 +31,7 @@ const LocationPermission = () => {
             {/* Full Screen Background Image */}
             <div className="absolute inset-0 z-0">
                 <img
-                    src="/images/location_permission_bg.png"
+                    src="/images/map_illustration.png"
                     alt="Location Permission Map"
                     className="w-full h-full object-cover animate-in fade-in duration-1000"
                 />
@@ -65,7 +65,7 @@ const LocationPermission = () => {
                     </h1>
 
                     <p className="text-gray-300 text-sm leading-relaxed px-4 opacity-90">
-                        لضمان وصول الكابتن إليك بسرعة ودقة، يرجى تمكين خدمات الموقع. هذا الإجراء ضروري لاستخدام التطبيق.
+                        لضمان وصول الكابتن إليك بسرعة ودقةق.
                     </p>
                 </div>
 
