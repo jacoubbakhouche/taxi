@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import RideRequestCard from "@/components/RideRequestCard";
 import RatingDialog from "@/components/RatingDialog";
-import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone } from "lucide-react";
+import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
