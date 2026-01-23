@@ -36,7 +36,7 @@ function MapUpdater({ center, recenterKey }: { center: [number, number], recente
 
   useEffect(() => {
     if (center && center[0] !== 0 && center[1] !== 0) {
-      map.flyTo(center, 15, {
+      map.flyTo(center, 16, { // Updated to 16 per user request
         animate: true,
         duration: 1.5
       });
