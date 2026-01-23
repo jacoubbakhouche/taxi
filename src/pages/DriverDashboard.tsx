@@ -201,18 +201,24 @@ const DriverDashboard = () => {
           .from('users')
           .select('*')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
         if (!result.error && result.data) {
           user = result.data;
-          // Ensure we type check or fetch correct fields
           // @ts-ignore
           user.documents_submitted = result.data.documents_submitted;
           userError = null;
           break;
         }
+
         userError = result.error;
-        if (result.error?.code === 'PGRST116') {
+        if (!result.data && !result.error) {
+          // Not found but no error (maybeSingle returned null)
+          // Treat as error for now or loop
+          userError = { message: "User profile not found", code: "PGRST116" };
+        }
+
+        if (userError?.code === 'PGRST116') {
           // Not found, wait and retry as it might be a race condition on signup
           await new Promise(r => setTimeout(r, 1000));
         } else {
@@ -220,12 +226,31 @@ const DriverDashboard = () => {
         }
       }
 
-      if (userError) {
+      if (userError || !user) {
         console.error("User profile fetch error:", userError);
-        // Don't throw immediately, let's see if we can recover or just show loading?
-        // Actually, if we can't get the user, we can't confirm verification.
-        // But throwing might cause a crash loop. 
-        // Let's set verified=false to be safe.
+        // User authenticated but profile missing/error.
+        // Show Toast and Redirect/Logout option.
+        toast({
+          title: "Access Error",
+          description: "Your profile could not be loaded.",
+          variant: "destructive",
+          action: (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => { supabase.auth.signOut(); navigate("/"); }}>
+                Log Out
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </div>
+          )
+        });
+
+        // Don't show "Upload Docs" (which happens if we just setVerified(false)).
+        // Instead, stay in loading or just return?
+        // If we return, the UI stays blank. 
+        // Let's set verified=false BUT maybe show a clean error?
+        // Handled by generic error boundary? No.
         setIsVerified(false);
         return;
       }
