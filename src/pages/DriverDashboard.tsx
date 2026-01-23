@@ -954,10 +954,21 @@ const DriverDashboard = () => {
       {/* --- Map Layer --- */}
       <div className="absolute inset-0 z-0">
         {!driverLocation ? (
-          <div className="flex flex-col items-center justify-center h-full bg-[#1A1A1A] text-white">
+          <div className="flex flex-col items-center justify-center h-full bg-[#1A1A1A] text-white p-4">
             <Loader2 className="w-12 h-12 text-[#84cc16] animate-spin mb-4" />
-            <h2 className="text-xl font-bold">جاري تحديد الموقع...</h2>
-            <p className="text-gray-400">يرجى الانتظار حتى يتم التقاط إشارة GPS</p>
+            <h2 className="text-xl font-bold mb-2">جاري تحديد الموقع...</h2>
+            <p className="text-gray-400 mb-6 text-center text-sm">يرجى الانتظار حتى يتم التقاط إشارة GPS</p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDriverLocation([36.9009, 7.7669]);
+                setLocationKey(prev => prev + 1);
+                toast({ title: "وضع يدوي", description: "تم استخدام موقع افتراضي لدخول التطبيق." });
+              }}
+              className="border-white/20 text-white/60 hover:text-white hover:bg-white/10"
+            >
+              تخطي (استخدام موقع افتراضي)
+            </Button>
           </div>
         ) : (
           <Map
