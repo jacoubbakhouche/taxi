@@ -23,7 +23,7 @@ interface DriverDrawerProps {
 }
 
 export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDrawerProps) => {
-    const [stats, setStats] = useState({ earnings: 0, rides: 0, rating: 5.0 });
+    const [stats, setStats] = useState({ earnings: 0, rides: 0, rating: 5.0, monthEarnings: 0, commission: 0 });
     const [recentRides, setRecentRides] = useState<any[]>([]);
     const [loadingStats, setLoadingStats] = useState(false);
 
@@ -51,14 +51,22 @@ export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDr
             const totalEarnings = rides?.reduce((sum, r) => sum + (r.price || 0), 0) || 0;
             const totalRides = rides?.length || 0;
 
-            // 2. Rating is in user object usually, or we average 'reviews' table if exists. 
-            // For now use driver.rating from users table details (passed in prop, or refetched if needed).
-            // Let's assume passed in prop 'driver' has it, or we use a default.
+            // Monthly Calc
+            const now = new Date();
+            const currentMonthRides = rides?.filter(r => {
+                const d = new Date(r.created_at);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }) || [];
+
+            const monthEarnings = currentMonthRides.reduce((sum, r) => sum + (r.price || 0), 0);
+            const commission = monthEarnings * 0.10; // 10%
 
             setStats({
                 earnings: totalEarnings,
                 rides: totalRides,
-                rating: driver.rating || 5.0
+                rating: driver.rating || 5.0,
+                monthEarnings,
+                commission
             });
 
             setRecentRides(rides?.slice(0, 5) || []); // Top 5
@@ -158,6 +166,22 @@ export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDr
                                     </span>
                                 );
                             })()}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Monthly Commission Card */}
+                <div className="px-4 pb-4">
+                    <Card className="bg-[#1a1010] border-red-500/30">
+                        <CardContent className="p-4 flex justify-between items-center">
+                            <div>
+                                <span className="text-xs text-red-400 block mb-1">Commission Due (This Month - 10%)</span>
+                                <span className="text-2xl font-bold text-red-500">{stats.commission.toLocaleString()} DA</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs text-gray-500 block mb-1">Monthly Earnings</span>
+                                <span className="text-sm font-mono text-gray-300">{stats.monthEarnings.toLocaleString()} DA</span>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
