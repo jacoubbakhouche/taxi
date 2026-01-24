@@ -41,7 +41,20 @@ const DriverDashboard = () => {
 
   useEffect(() => {
     checkAuth();
-    getCurrentLocation(); // Explicit call on mount to force immediate map center
+    // Try to recover location from DB first (for instant map load)
+    const recoverLocation = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data } = await supabase.from('users').select('current_lat, current_lng').eq('auth_id', session.user.id).single();
+        if (data?.current_lat && data?.current_lng) {
+          console.log("Recovered location from DB:", data.current_lat, data.current_lng);
+          setDriverLocation([data.current_lat, data.current_lng]);
+        }
+      }
+    };
+    recoverLocation();
+
+    getCurrentLocation(); // Then try fresh GPS
   }, []);
 
   // ... (rest of restoring active ride)
@@ -129,66 +142,102 @@ const DriverDashboard = () => {
     };
   }, [isOnline, userId, currentRide, customerLocation]);
 
-  // 3. NEW: Check for EXISTING pending rides on mount/resume
+  // 3. NEW: Check for EXISTING pending AND active rides on mount/resume
   useEffect(() => {
-    if (!isOnline || !userId || !driverLocation || pendingRide || currentRide) return;
+    if (!isOnline || !userId || !driverLocation) return;
 
-    const fetchPendingRides = async () => {
-      console.log("Checking for existing pending rides...");
-      const { data: rides, error } = await supabase
+    // A. Check for Active Rides (Accepted / In Progress) - RECOVERY LOGIC
+    const fetchActiveRide = async () => {
+      const { data: activeRide } = await supabase
         .from('rides')
         .select('*')
-        .eq('status', 'pending')
-        .or(`driver_id.is.null,driver_id.eq.${userId}`);
+        .eq('driver_id', userId)
+        .in('status', ['accepted', 'in_progress'])
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching pending rides:', error);
-        return;
-      }
+      if (activeRide) {
+        console.log("Found ACTIVE ride on resume:", activeRide);
+        setCurrentRide(activeRide);
 
-      // Filter out ignored rides
-      const validRides = rides.filter(r => !ignoredRideIds.includes(r.id));
-
-      if (validRides && validRides.length > 0) {
-        // Find the closest ride
-        let closestRide = null;
-        let minDistance = Infinity;
-
-        for (const ride of validRides) {
-          const distance = calculateDistance(
-            driverLocation[0],
-            driverLocation[1],
-            ride.pickup_lat,
-            ride.pickup_lng
-          );
-
-          if (distance <= 5 && distance < minDistance) {
-            minDistance = distance;
-            closestRide = ride;
-          }
-        }
-
-        if (closestRide) {
-          console.log("Found existing pending ride:", closestRide);
-          setPendingRide(closestRide);
-
-          // Fetch customer info
+        // Fetch customer info for this active ride
+        if (activeRide.customer_id) {
           const { data: customerData } = await supabase
             .from('users')
             .select('id, full_name, phone, rating, total_rides, profile_image')
-            .eq('id', closestRide.customer_id)
+            .eq('id', activeRide.customer_id)
             .single();
 
           if (customerData) {
             setCustomerInfo(customerData);
+            setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]);
+            setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
           }
-          setIsSheetExpanded(true);
         }
+        setIsSheetExpanded(true);
+        return; // Exit if we found an active ride, no need to look for pending
       }
+
+      // B. If no active ride, look for Pending Rides
+      const fetchPendingRides = async () => {
+        console.log("Checking for existing pending rides...");
+        const { data: rides, error } = await supabase
+          .from('rides')
+          .select('*')
+          .eq('status', 'pending')
+          .or(`driver_id.is.null,driver_id.eq.${userId}`);
+
+        if (error) {
+          console.error('Error fetching pending rides:', error);
+          return;
+        }
+
+        // Filter out ignored rides
+        const validRides = rides.filter(r => !ignoredRideIds.includes(r.id));
+
+        if (validRides && validRides.length > 0) {
+          // Find the closest ride
+          let closestRide = null;
+          let minDistance = Infinity;
+
+          for (const ride of validRides) {
+            const distance = calculateDistance(
+              driverLocation[0],
+              driverLocation[1],
+              ride.pickup_lat,
+              ride.pickup_lng
+            );
+
+            if (distance <= 5 && distance < minDistance) {
+              minDistance = distance;
+              closestRide = ride;
+            }
+          }
+
+          if (closestRide) {
+            console.log("Found existing pending ride:", closestRide);
+            setPendingRide(closestRide);
+
+            // Fetch customer info
+            const { data: customerData } = await supabase
+              .from('users')
+              .select('id, full_name, phone, rating, total_rides, profile_image')
+              .eq('id', closestRide.customer_id)
+              .single();
+
+            if (customerData) {
+              setCustomerInfo(customerData);
+            }
+            setIsSheetExpanded(true);
+          }
+        }
+      };
+
+      fetchPendingRides();
     };
 
-    fetchPendingRides();
-  }, [isOnline, userId, driverLocation, pendingRide, currentRide, ignoredRideIds]); // Added ignoredRideIds dependency
+    fetchActiveRide();
+
+  }, [isOnline, userId, driverLocation, ignoredRideIds]); // Removed pendingRide/currentRide to strictly run on state/location availability
 
   const checkAuth = async () => {
     try {

@@ -446,12 +446,21 @@ const CustomerDashboard = () => {
     }
   };
 
+  /* 
+     Update handleRequestRide: 
+     If new request, we should start fresh? 
+     Actually if candidateDriver is NULL, we call findNearestDriver.
+     If we want to start a FRESH search session, we should clear rejected list.
+  */
   const handleRequestRide = async () => {
+    // If no candidate, start search (fresh)
     if (!candidateDriver) {
-      findNearestDriver();
+      setRejectedDriverIds([]); // Clear history
+      findNearestDriver([]); // Pass empty list
       return;
     }
 
+    // ... (rest of logic)
     if (!userId || !destination) return;
 
     try {
@@ -474,7 +483,9 @@ const CustomerDashboard = () => {
 
       setCurrentRideId(data.id);
       setRideStatus('pending');
-      setCandidateDriver(null); // Clear popup
+      setCandidateDriver(null); // Clear popup (but keep rejected history? No, reset if success?)
+      // We can reset rejected list once status moves to pending or completed
+      setRejectedDriverIds([]);
 
       toast({ title: "تم الإرسال", description: "جاري انتظار السائق..." });
 
@@ -488,6 +499,7 @@ const CustomerDashboard = () => {
     if (!currentRideId) return;
     await supabase.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
     resetState();
+    setRejectedDriverIds([]); // Clear history
   };
 
   const handleEndRide = async () => {
@@ -589,9 +601,55 @@ const CustomerDashboard = () => {
         />
       </div>
 
-      {/* --- Bottom Sheet / Panel --- */}
-      {/* --- Bottom Sheet / Panel (Professional Dark Style) --- */}
-      {rideStatus === 'idle' && (
+      {candidateDriver && !currentRideId && (
+        <div className="absolute font-sans bottom-0 left-0 right-0 p-4 bg-[#111] border-t border-white/10 rounded-t-3xl animate-in slide-in-from-bottom-10 z-[3000]">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-green-500">
+              {candidateDriver.profile_image ? (
+                <img src={candidateDriver.profile_image} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold text-lg">
+                  {candidateDriver.full_name?.[0]}
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">{candidateDriver.full_name}</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400 text-sm">★ {candidateDriver.rating?.toFixed(1) || 5.0}</span>
+                <span className="text-gray-400 text-xs">• {candidateDriver.car_model || "Taxi"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            {/* REJECT BUTTON - The logic fix */}
+            <Button
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white h-12 rounded-xl font-bold border border-white/10"
+              onClick={() => {
+                // 1. Calculate new list IMMEDIATELY
+                const newList = [...rejectedDriverIds, candidateDriver.id];
+                // 2. Update UI State (for future)
+                setRejectedDriverIds(newList);
+                // 3. Search AGAIN using the NEW list directly (Bypassing state delay)
+                findNearestDriver(newList);
+              }}
+            >
+              رفض
+            </Button>
+
+            <Button
+              className="flex-[2] bg-[#84cc16] hover:bg-[#65a30d] text-black h-12 rounded-xl font-bold"
+              onClick={handleRequestRide}
+            >
+              قبول
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ... old bottom sheet ... */}
+      {rideStatus === 'idle' && !candidateDriver && (
         <div className="fixed bottom-0 left-0 right-0 z-[1000] p-6 pb-8 bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] border-t border-white/5 transition-all duration-300 animate-in slide-in-from-bottom-10">
           {/* Handle Bar */}
           <div className="w-full flex justify-center pb-5">
