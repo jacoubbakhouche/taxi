@@ -40,7 +40,7 @@ const DriverDashboard = () => {
 
   useEffect(() => {
     checkAuth();
-    // getCurrentLocation(); // REMOVED: Don't fetch single time, rely on watch
+    getCurrentLocation(); // Explicit call on mount to force immediate map center
   }, []);
 
   // ... (rest of restoring active ride)
@@ -281,7 +281,7 @@ const DriverDashboard = () => {
 
 
 
-  const getCurrentLocation = () => {
+  function getCurrentLocation() {
     if (!navigator.geolocation) {
       console.warn("Geolocation not supported");
       return;
