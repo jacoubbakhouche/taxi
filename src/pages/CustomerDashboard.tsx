@@ -387,11 +387,12 @@ const CustomerDashboard = () => {
     if (destination && userLocation && rideStatus === 'idle') calculateRoute();
   }, [destination]);
 
-  const findNearestDriver = async () => {
+  const findNearestDriver = async (ignoreList: string[] = []) => {
     setIsSearchingDriver(true);
     setCandidateDriver(null);
     try {
-      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      // Relaxed filter: 60 minutes (to avoid dropping drivers with minor connection drops)
+      const fiveMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
       // 1. Fetch Active Drivers
       const { data: drivers } = await supabase
@@ -414,7 +415,7 @@ const CustomerDashboard = () => {
       const { data: busyRides } = await supabase.from('rides').select('driver_id').in('status', ['accepted', 'in_progress']).in('driver_id', driverIds);
       const busyIds = busyRides?.map(b => b.driver_id) || [];
 
-      const availableDrivers = drivers.filter(d => !busyIds.includes(d.id) && !declinedDrivers.includes(d.id));
+      const availableDrivers = drivers.filter(d => !busyIds.includes(d.id) && !declinedDrivers.includes(d.id) && !ignoreList.includes(d.id));
 
       if (availableDrivers.length === 0) {
         toast({ title: "الجميع مشغولون", description: "كل السائقين في رحلات حالياً" });
@@ -646,7 +647,7 @@ const CustomerDashboard = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => { setDeclinedDrivers(prev => [...prev, candidateDriver.id]); setCandidateDriver(null); findNearestDriver(); }}>رفض</Button>
+              <Button variant="outline" onClick={() => { setDeclinedDrivers(prev => [...prev, candidateDriver.id]); setCandidateDriver(null); findNearestDriver([candidateDriver.id]); }}>رفض</Button>
               <Button onClick={handleRequestRide}>قبول</Button>
             </div>
           </div>

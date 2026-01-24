@@ -34,6 +34,7 @@ const DriverDashboard = () => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [carteGriseFile, setCarteGriseFile] = useState<File | null>(null);
+  const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false); // New State for Subscription
 
   // ... (inside checkAuth) update this state
 
@@ -204,6 +205,7 @@ const DriverDashboard = () => {
 
       if (!result.error && result.data) {
         user = result.data;
+        setUserId(user.id); // Critical Fix: Ensure userId is set in state!
       }
 
       if (!user) {
@@ -213,8 +215,25 @@ const DriverDashboard = () => {
       }
 
       // 1. CHECK DOCUMENTS / VERIFICATION
+      // 1. CHECK DOCUMENTS / VERIFICATION
       if (!user.is_verified) {
         console.log("User not verified - Blocking access");
+
+        // Special Case: Blocked/Suspended User 
+        // If they submitted docs effectively (or were previously verified) AND have ANY subscription date set (even if valid),
+        // it means they are an EXISTING driver who was Suspended by Admin.
+        // Show Red Screen (Contact Admin) instead of Yellow (Under Review).
+        const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
+        const now = new Date();
+
+        // Logic: Has sub date (Existing) AND Unverified (Suspended) -> Red Screen
+        // (Note: Fresh applicants have subEnd = null)
+        if (user.documents_submitted && subEnd) {
+          console.log("User unverified BUT has subscription date (Suspended) -> Show Red Screen");
+          setIsSubscriptionExpired(true);
+          return;
+        }
+
         setIsVerified(false);
         // @ts-ignore
         setDocumentsSubmitted(user.documents_submitted || false);
@@ -227,36 +246,14 @@ const DriverDashboard = () => {
 
       if (!subEnd || subEnd < now) {
         console.log("Subscription expired:", user.subscription_end_date);
-        // Verify if user is grandfathered or if we enforce subscription
-        // For now, per user request "IT MUST WORK", we enforce logic.
-        // BUT, user also said "Free Mode".
-        // Since I forced is_verified=true in DB, they pass check #1.
-        // Subscription check logic: If verified logic implies active sub?
-        // Usually is_verified is toggleable. Subscription is automated.
-        // Let's rely on is_verified as the master switch for "Permit".
-        // If is_verified is TRUE, we allow, even if sub is expired?
-        // Or does user want strict sub enforcement?
-        // User said: "When I decide to activate... it must work".
-        // So I should UNCOMMENT the block below.
-
-        // toast({
-        //   title: "انتهى الاشتراك ⏳",
-        //   description: "يرجى الاتصال بالإدارة لتجديد اشتراكك الشهري.",
-        //   variant: "destructive",
-        //   duration: 6000
-        // });
-
-        // setIsVerified(false);
-        // return;
-
-        // Wait, if I uncomment this, "Free Mode" (verified=true) users with NULL dates will be BLOCKED.
-        // Most current users have NULL dates.
-        // So uncommenting this WILL BLOCK EVERYONE immediately.
-        // User said: "It should work when I activate it".
-        // I will leave Subscription blocked BUT keep Verified check active.
-        // This gives him control via the "Verified" switch in Admin (Manual Activation).
-        // Automated Link to Subscription is risky if dates are null.
+        setIsSubscriptionExpired(true);
+        // We do NOT set isVerified=false here, because we want to show a DIFFERENT screen (Subscription Expired), 
+        // not the Upload Documents screen.
+        // Returning here prevents entering the dashboard.
+        return;
       }
+
+      setIsSubscriptionExpired(false);
 
       setIsVerified(true);
       setIsOnline(user.is_online || false);
@@ -333,6 +330,9 @@ const DriverDashboard = () => {
       const licenseUrl = await uploadFile(licenseFile, 'license');
       const carteGriseUrl = await uploadFile(carteGriseFile, 'carte_grise');
 
+      console.log("Files uploaded successfully. License:", licenseUrl, "Card:", carteGriseUrl);
+      console.log("Attempting to update user profile...");
+
       // Update User Profile
       const { error: updateError } = await supabase
         .from('users')
@@ -343,7 +343,10 @@ const DriverDashboard = () => {
         })
         .eq('id', userId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Database Update Error:", updateError);
+        throw updateError;
+      }
 
       setDocumentsSubmitted(true);
       toast({
@@ -352,7 +355,8 @@ const DriverDashboard = () => {
       });
 
     } catch (error: any) {
-      console.error("Upload error:", error);
+      console.error("Upload/Update Failed Full Error:", error);
+      alert(`Upload Failed: ${error.message || JSON.stringify(error)}`); // Aggressive alert as requested
       toast({
         title: "Upload Failed",
         description: error.message || "Could not upload documents.",
@@ -765,6 +769,40 @@ const DriverDashboard = () => {
 
     return undefined;
   };
+
+  // 0. BLOCKER: SUBSCRIPTION EXPIRED / ACCOUNT SUSPENDED
+  if (isSubscriptionExpired) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-8 space-y-8 font-sans animate-in fade-in">
+        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center animate-pulse">
+          <Clock className="w-12 h-12 text-red-500" />
+        </div>
+
+        <div className="text-center space-y-4 max-w-sm">
+          <h1 className="text-3xl font-bold text-red-500">تنبيه حساب</h1>
+          <p className="text-gray-400 text-lg leading-relaxed">
+            حسابك معلق حالياً أو انتهى اشتراكك.
+            <br />
+            يرجى التواصل مع الإدارة لتسوية الوضعية.
+          </p>
+        </div>
+
+        <div className="w-full max-w-xs space-y-3">
+          <Button
+            className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-lime-500/20"
+            onClick={() => window.open('tel:0555555555')}
+          >
+            <Phone className="w-5 h-5 mr-3" />
+            اتصل بالإدارة
+          </Button>
+
+          <Button variant="ghost" onClick={handleLogout} className="w-full text-gray-500 hover:text-white">
+            تسجيل الخروج
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isVerified) {
     return (

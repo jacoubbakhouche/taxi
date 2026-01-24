@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     // CRM State
     const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
     const [showPendingOnly, setShowPendingOnly] = useState(false);
+    const [showExpiredOnly, setShowExpiredOnly] = useState(false); // New Filter
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -70,17 +71,31 @@ const AdminDashboard = () => {
         );
 
         // 3. Pending Filter (Action Center)
-        // Pending = Needs Action = submitted docs but not verified yet.
-        // Or if they are verified, we don't show them in "Pending Only" mode.
         if (showPendingOnly) {
-            return matchesSearch && (!user.is_verified && user.documents_submitted);
+            return matchesSearch && (!user.is_verified && user.documents_submitted && !user.subscription_end_date); // Pending = New Docs, No history
+        }
+
+        // 4. Expired Filter (Unpaid)
+        if (showExpiredOnly) {
+            // Expired = Has date AND (date < now OR is_verified=false with date)
+            // Basically anyone we need to collect money from.
+            const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
+            if (!subEnd) return false; // No date = Free/New (handled by Pending)
+            return matchesSearch && (subEnd < new Date() || !user.is_verified);
         }
 
         return matchesSearch;
     });
 
-    // Helper for Pending Count
-    const pendingCount = users.filter(u => u.role === 'driver' && !u.is_verified && u.documents_submitted).length;
+    // Helpers for Counts
+    const pendingCount = users.filter(u => u.role === 'driver' && !u.is_verified && u.documents_submitted && !u.subscription_end_date).length;
+
+    const expiredCount = users.filter(u => {
+        if (u.role !== 'driver' || !u.subscription_end_date) return false;
+        const subEnd = new Date(u.subscription_end_date);
+        // Count if expired OR if manually suspended (unverified even if date is future)
+        return subEnd < new Date() || !u.is_verified;
+    }).length;
 
     // Helper to calculate days left
     const getDaysLeft = (dateStr: string | null) => {
@@ -141,7 +156,7 @@ const AdminDashboard = () => {
                     {/* KPI / Filter Toggles */}
                     <div className="flex gap-4 w-full md:w-auto overflow-x-auto">
                         <button
-                            onClick={() => setShowPendingOnly(false)}
+                            onClick={() => { setShowPendingOnly(false); setShowExpiredOnly(false); }}
                             className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${!showPendingOnly ? 'bg-[#222] border-green-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
                         >
                             <span className="text-xs text-gray-500">All Drivers</span>
@@ -149,13 +164,23 @@ const AdminDashboard = () => {
                         </button>
 
                         <button
-                            onClick={() => setShowPendingOnly(true)}
-                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showPendingOnly ? 'bg-[#2a1a1a] border-red-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                            onClick={() => { setShowPendingOnly(true); setShowExpiredOnly(false); }}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showPendingOnly && !showExpiredOnly ? 'bg-[#2a1a1a] border-yellow-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
                         >
                             <span className="text-xs text-gray-500 flex items-center gap-1">
-                                Pending {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+                                Pending {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />}
                             </span>
                             <span className="text-xl font-bold text-white">{pendingCount}</span>
+                        </button>
+
+                        <button
+                            onClick={() => { setShowExpiredOnly(true); setShowPendingOnly(false); }}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showExpiredOnly ? 'bg-red-950/30 border-red-500/80 ring-1 ring-red-500/20' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                        >
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                Expired / Unpaid {expiredCount > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                            </span>
+                            <span className="text-xl font-bold text-white">{expiredCount}</span>
                         </button>
                     </div>
 
