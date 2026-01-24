@@ -391,40 +391,52 @@ const CustomerDashboard = () => {
     setIsSearchingDriver(true);
     setCandidateDriver(null);
     try {
-      // Relaxed filter: 60 minutes (to avoid dropping drivers with minor connection drops)
-      const fiveMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      if (!userLocation) {
+        toast({ title: "خطأ", description: "لم يتم تحديد موقعك الحالي", variant: "destructive" });
+        setIsSearchingDriver(false);
+        return;
+      }
 
-      // 1. Fetch Active Drivers
-      const { data: drivers } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'driver')
-        .eq('is_online', true)
-        .gt('updated_at', fiveMinAgo);
+      console.log("Searching for drivers near:", userLocation);
+
+      // Call the Server-Side Matcher (PostGIS)
+      // This is much faster and scalable than fetching all users
+      const { data: drivers, error } = await supabase.rpc('match_drivers_for_ride', {
+        client_lat: userLocation[0],
+        client_long: userLocation[1],
+        radius_km: 10,  // 10km Radius
+        limit_count: 5  // Get top 5
+      });
+
+      if (error) throw error;
+
+      console.log("Matched Drivers (RPC):", drivers);
 
       if (!drivers || drivers.length === 0) {
-        toast({ title: "لا يوجد سائقين", description: "جرب مرة أخرى لاحقاً", variant: "destructive" });
+        toast({ title: "لا يوجد سائقين", description: "لا يوجد سائقين متاحين حالياً في منطقتك (10 كم)", variant: "destructive" });
         setIsSearchingDriver(false);
         return;
       }
 
-      // 2. Filter Busy & Declined
-      // (Simplified for robustness: Check client side or use RPC in future)
-      // Check if driver has active ride
-      const driverIds = drivers.map(d => d.id);
-      const { data: busyRides } = await supabase.from('rides').select('driver_id').in('status', ['accepted', 'in_progress']).in('driver_id', driverIds);
-      const busyIds = busyRides?.map(b => b.driver_id) || [];
+      // Convert RPC result to compatible driver object for UI
+      // Use the first one (Closest)
+      const closest = drivers[0];
 
-      const availableDrivers = drivers.filter(d => !busyIds.includes(d.id) && !declinedDrivers.includes(d.id) && !ignoreList.includes(d.id));
+      // Need to transform it to match 'user' table shape for candiateDriver state
+      // (Or fetch full profile if needed, but RPC returns enough basic info)
+      // We will create a hybrid object or just use the ID to fetch full profile if logic requires it.
+      // But let's check what 'setCandidateDriver' expects. It expects a User object.
+      // For now, let's construct a minimal object or fetch full profile.
+      // Fetching full profile for the candidate is safer for UI rendering.
 
-      if (availableDrivers.length === 0) {
-        toast({ title: "الجميع مشغولون", description: "كل السائقين في رحلات حالياً" });
-        setIsSearchingDriver(false);
-        return;
+      const { data: fullProfile } = await supabase.from('users').select('*').eq('id', closest.driver_id).single();
+
+      if (fullProfile) {
+        setCandidateDriver(fullProfile);
+      } else {
+        // Fallback if fetch fails (rare)
+        toast({ title: "Error", description: "Driver data error", variant: "destructive" });
       }
-
-      // 3. Pick First (Mock "Nearest")
-      setCandidateDriver(availableDrivers[0]);
 
     } catch (e) {
       console.error(e);

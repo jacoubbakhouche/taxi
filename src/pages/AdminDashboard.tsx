@@ -206,6 +206,7 @@ const AdminDashboard = () => {
                                 <TableHead className="text-gray-400 w-[300px]">Driver</TableHead>
                                 <TableHead className="text-gray-400">Status</TableHead>
                                 <TableHead className="text-gray-400">Subscription</TableHead>
+                                <TableHead className="text-gray-400 text-right">Commission</TableHead>
                                 <TableHead className="text-gray-400">Vehicle</TableHead>
                                 <TableHead className="text-gray-400 text-right">Joined</TableHead>
                             </TableRow>
@@ -267,6 +268,13 @@ const AdminDashboard = () => {
                                                         {user.subscription_end_date ? `${getDaysLeft(user.subscription_end_date)} Days` : "No Sub (Free)"}
                                                     </span>
                                                 </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {user.role === 'driver' && (
+                                                <span className={`font-mono font-bold ${(user.accumulated_commission || 0) > 1000 ? "text-red-500" : "text-gray-400"}`}>
+                                                    {(user.accumulated_commission || 0).toLocaleString()} DA
+                                                </span>
                                             )}
                                         </TableCell>
                                         <TableCell>
