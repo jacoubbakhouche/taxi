@@ -247,9 +247,21 @@ const DriverDashboard = () => {
         return;
       }
 
-      // 1. CALL THE JUDGE! ⚖️
+      // 1. Resolve User ID (Table ID) from Auth ID (Session ID)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', session.user.id)
+        .single();
+
+      if (userError || !userData) {
+        console.error("User ID Resolution Failed:", userError);
+        return;
+      }
+
+      // 2. CALL THE JUDGE! ⚖️
       const { data: status, error: judgeError } = await supabase.rpc('get_driver_status', {
-        driver_id: session.user.id
+        driver_id: userData.id // Pass the TABLE ID, not the Auth ID
       });
 
       if (judgeError) {
