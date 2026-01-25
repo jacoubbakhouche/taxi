@@ -1,6 +1,5 @@
--- The "Judge" Function in SQL (Revised with COALESCE)
--- This function decides the driver's status based on strict order of operations.
--- Now handles NULL values robustly to prevent logic fall-through.
+-- The "Judge" Function in SQL (Revised with Golden Ticket Logic)
+-- "Verified" status now acts as a Golden Ticket bypass for document checks.
 
 CREATE OR REPLACE FUNCTION get_driver_status(driver_id uuid)
 RETURNS text
@@ -10,6 +9,7 @@ AS $$
 DECLARE
   u_record RECORD;
   is_premium_mode boolean;
+  is_driver_verified boolean;
 BEGIN
   -- 1. Fetch User Data
   SELECT * INTO u_record FROM public.users WHERE id = driver_id;
@@ -17,40 +17,43 @@ BEGIN
   -- 2. Fetch Global Settings
   SELECT premium_mode_enabled INTO is_premium_mode FROM public.app_settings LIMIT 1;
 
+  is_driver_verified := COALESCE(u_record.is_verified, false);
+
   -- -----------------------------------------------------------
   -- THE LOGIC LADDER (Strict Order)
   -- -----------------------------------------------------------
 
-  -- 1. Suspended? (Always First)
-  -- Use COALESCE to treat NULL as false
+  -- 1. Suspended? (Always First - Blocks Everyone)
   IF COALESCE(u_record.is_suspended, false) = true THEN
     RETURN 'suspended';
   END IF;
 
-  -- 2. Freemium Mode? (If Enabled/False/Null, assume Freemium if logic dictates, or strictly follow setting)
-  -- Logic: If premium_mode_enabled is FALSE (or NULL usually defaults to non-blocking in earlier logic, let's treat NULL as FALSE for 'free mode default' safety)
+  -- 2. Freemium Mode? (Free Pass for Everyone)
   IF COALESCE(is_premium_mode, false) = false THEN
-    RETURN 'active'; -- Freemium = No more checks needed
+    RETURN 'active';
   END IF;
 
-  -- 3. Documents Uploaded? (FIX: Handle NULLs)
-  -- This was the bug: NULL = false fails. COALESCE(NULL, false) = false passes equality check.
-  IF COALESCE(u_record.documents_submitted, false) = false THEN
-    RETURN 'upload_documents';
+  -- 3. THE GOLDEN TICKET CHECK
+  -- If Verified, skip document checks and go straight to payment.
+  -- This fixes the issue where manually verified drivers get stuck in 'upload_documents'.
+  
+  IF is_driver_verified = false THEN
+      -- If NOT verified, enforce document upload first
+      IF COALESCE(u_record.documents_submitted, false) = false THEN
+        RETURN 'upload_documents';
+      END IF;
+      
+      -- If documents submitted but not verified -> Pending
+      RETURN 'pending_approval';
   END IF;
 
-  -- 4. Verified by Admin?
-  IF COALESCE(u_record.is_verified, false) = false THEN
-    RETURN 'pending_approval';
-  END IF;
-
-  -- 5. Subscription Valid?
-  -- (Checks if date is null OR in the past)
+  -- 4. Subscription Valid? (Only for Verified Drivers)
+  -- If we reached here, is_driver_verified is TRUE.
   IF u_record.subscription_end_date IS NULL OR u_record.subscription_end_date < now() THEN
     RETURN 'payment_required';
   END IF;
 
-  -- 6. All Clear
+  -- 5. All Clear
   RETURN 'active';
 
 END;
