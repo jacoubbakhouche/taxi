@@ -276,19 +276,34 @@ const AdminDashboard = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            {user.is_verified ? (
-                                                <Badge className="bg-green-900/30 text-green-400 border-green-900 hover:bg-green-900/50">
-                                                    Active
-                                                </Badge>
-                                            ) : user.documents_submitted ? (
-                                                <Badge className="bg-yellow-900/30 text-yellow-400 border-yellow-900 hover:bg-yellow-900/50 animate-pulse">
-                                                    Needs Approval
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="border-[#444] text-gray-500" title="Free Entry / Inactive">
-                                                    {user.subscription_end_date ? "Unknown" : "Free Ent."}
-                                                </Badge>
-                                            )}
+                                            {(() => {
+                                                // ADMIN VIEW LOGIC (The Judge Mirror)
+                                                // 1. Suspended?
+                                                if (user.is_suspended) return <Badge variant="destructive">Suspended</Badge>;
+
+                                                // 2. Freemium?
+                                                if (!premiumMode) return <Badge className="bg-green-900/30 text-green-400 border-green-900">Active (Free)</Badge>;
+
+                                                // 3. Documents Missing? (Premium only)
+                                                if (!user.documents_submitted && !user.is_verified) return <Badge variant="outline" className="text-gray-500">New / No Docs</Badge>;
+
+                                                // 4. Pending Approval?
+                                                // Using strict check for documents_submitted to be true
+                                                if (!user.is_verified && user.documents_submitted === true) return <Badge className="bg-yellow-900/30 text-yellow-400 border-yellow-900 animate-pulse">Needs Approval</Badge>;
+
+                                                // Double check if data might be stale or RPC mismatch (fallback)
+                                                if (!user.is_verified && user.documents_submitted) return <Badge className="bg-yellow-900/30 text-yellow-400 border-yellow-900 animate-pulse">Needs Approval</Badge>;
+
+                                                // 5. Subscription Check (Premium only)
+                                                // Use helper to check validity
+                                                const daysLeft = getDaysLeft(user.subscription_end_date);
+                                                const subValid = user.subscription_end_date && new Date(user.subscription_end_date) > new Date();
+
+                                                if (!subValid) return <Badge className="bg-red-950/50 text-red-500 border-red-900">Expired / Unpaid</Badge>;
+
+                                                // 6. Active
+                                                return <Badge className="bg-green-900/30 text-green-400 border-green-900">Active</Badge>;
+                                            })()}
                                         </TableCell>
                                         <TableCell>
                                             {user.role === 'driver' && (

@@ -117,11 +117,22 @@ export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDr
                             <div>
                                 <h2 className="text-xl font-bold flex items-center gap-2">
                                     {driver.full_name}
-                                    {driver.is_verified ? (
-                                        <CheckCircle className="w-5 h-5 text-green-500" />
-                                    ) : (
-                                        <Clock className="w-5 h-5 text-yellow-500" />
-                                    )}
+                                    {(() => {
+                                        // DRAWER BADGE LOGIC (The Judge Mirror)
+                                        // We need premiumMode passed in or fetched. 
+                                        // For simplicity, let's assume strict logic: 
+                                        // If Verified BUT Sub Expired -> Warning.
+
+                                        if (driver.is_verified) {
+                                            const subValid = driver.subscription_end_date && new Date(driver.subscription_end_date) > new Date();
+                                            // If Sub is NOT valid, we show warning, even if 'is_verified' is true in DB
+                                            // (Unless we pass premiumMode prop, but let's assume we want to show expiration if it exists)
+                                            if (!subValid) return <Clock className="w-5 h-5 text-red-500 animate-pulse" />;
+                                            return <CheckCircle className="w-5 h-5 text-green-500" />;
+                                        }
+                                        if (driver.documents_submitted) return <Clock className="w-5 h-5 text-yellow-500" />;
+                                        return <XCircle className="w-5 h-5 text-gray-500" />;
+                                    })()}
                                 </h2>
                                 <p className="text-gray-400 text-sm flex items-center gap-2 mt-1">
                                     <Phone className="w-3 h-3" /> {driver.phone}
@@ -203,15 +214,36 @@ export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDr
                                     <div className="space-y-4">
                                         <h3 className="font-semibold text-gray-300">Account Actions</h3>
                                         <div className="flex gap-4">
-                                            {driver.is_verified ? (
-                                                <Button variant="destructive" className="w-full gap-2" onClick={() => handleVerify(false)}>
-                                                    <XCircle className="w-4 h-4" /> Suspend / Unverify
-                                                </Button>
-                                            ) : (
-                                                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={() => handleVerify(true)}>
-                                                    <CheckCircle className="w-4 h-4" /> Approve & Verify
-                                                </Button>
-                                            )}
+                                            {/* Logic: 
+                                                If Verified AND Valid Sub -> Show Unverify (Suspend)
+                                                If Verified BUT Expired -> Show Renew
+                                                If Unverified -> Show Approve & Verify
+                                            */}
+                                            {(() => {
+                                                const subValid = driver.subscription_end_date && new Date(driver.subscription_end_date) > new Date();
+
+                                                if (driver.is_verified && subValid) {
+                                                    return (
+                                                        <Button variant="destructive" className="w-full gap-2" onClick={() => handleVerify(false)}>
+                                                            <XCircle className="w-4 h-4" /> Suspend / Unverify
+                                                        </Button>
+                                                    );
+                                                }
+
+                                                if (driver.is_verified && !subValid) {
+                                                    return (
+                                                        <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => handleVerify(true)}>
+                                                            <Calendar className="w-4 h-4" /> Renew Subscription (30 Days)
+                                                        </Button>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={() => handleVerify(true)}>
+                                                        <CheckCircle className="w-4 h-4" /> Approve & Verify
+                                                    </Button>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </TabsContent>

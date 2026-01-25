@@ -1,5 +1,6 @@
--- The "Judge" Function in SQL
+-- The "Judge" Function in SQL (Revised with COALESCE)
 -- This function decides the driver's status based on strict order of operations.
+-- Now handles NULL values robustly to prevent logic fall-through.
 
 CREATE OR REPLACE FUNCTION get_driver_status(driver_id uuid)
 RETURNS text
@@ -16,29 +17,34 @@ BEGIN
   -- 2. Fetch Global Settings
   SELECT premium_mode_enabled INTO is_premium_mode FROM public.app_settings LIMIT 1;
 
-  -- 3. THE LOGIC LADDER (Strict Order)
+  -- -----------------------------------------------------------
+  -- THE LOGIC LADDER (Strict Order)
+  -- -----------------------------------------------------------
 
-  -- Barrier 1: Suspended?
-  IF u_record.is_suspended THEN
+  -- 1. Suspended? (Always First)
+  -- Use COALESCE to treat NULL as false
+  IF COALESCE(u_record.is_suspended, false) = true THEN
     RETURN 'suspended';
   END IF;
 
-  -- Barrier 2: Freemium Mode? (If Premium is OFF, everyone passes here)
-  IF is_premium_mode = false THEN
+  -- 2. Freemium Mode? (If Enabled/False/Null, assume Freemium if logic dictates, or strictly follow setting)
+  -- Logic: If premium_mode_enabled is FALSE (or NULL usually defaults to non-blocking in earlier logic, let's treat NULL as FALSE for 'free mode default' safety)
+  IF COALESCE(is_premium_mode, false) = false THEN
     RETURN 'active'; -- Freemium = No more checks needed
   END IF;
 
-  -- Barrier 3: Documents Uploaded?
-  IF u_record.documents_submitted = false THEN
+  -- 3. Documents Uploaded? (FIX: Handle NULLs)
+  -- This was the bug: NULL = false fails. COALESCE(NULL, false) = false passes equality check.
+  IF COALESCE(u_record.documents_submitted, false) = false THEN
     RETURN 'upload_documents';
   END IF;
 
-  -- Barrier 4: Verified by Admin?
-  IF u_record.is_verified = false THEN
+  -- 4. Verified by Admin?
+  IF COALESCE(u_record.is_verified, false) = false THEN
     RETURN 'pending_approval';
   END IF;
 
-  -- Barrier 5: Subscription Valid?
+  -- 5. Subscription Valid?
   -- (Checks if date is null OR in the past)
   IF u_record.subscription_end_date IS NULL OR u_record.subscription_end_date < now() THEN
     RETURN 'payment_required';

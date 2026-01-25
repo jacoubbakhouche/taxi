@@ -350,6 +350,10 @@ const DriverDashboard = () => {
     );
   };
 
+  // Ensure we check for 'pending_approval' status equivalent on load even if 'The Judge' returns something else (though judge handles it).
+  // The Judge returns 'pending_approval' if docs are submitted but not verified.
+  // So 'upload_documents' is ONLY returned if docs are NOT submitted.
+
   const handleUploadDocuments = async () => {
     if (!licenseFile || !carteGriseFile || !userId) {
       toast({
@@ -386,21 +390,25 @@ const DriverDashboard = () => {
       console.log("Attempting to update user profile...");
 
       // Update User Profile
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          driving_license_url: licenseUrl,
-          carte_grise_url: carteGriseUrl,
-          documents_submitted: true
-        })
-        .eq('id', userId);
+      // Update User Profile via RPC (Secure & Atomic)
+      const { error: updateError } = await supabase.rpc('submit_driver_documents', {
+        p_license_url: licenseUrl,
+        p_carte_grise_url: carteGriseUrl
+      });
 
       if (updateError) {
         console.error("Database Update Error:", updateError);
         throw updateError;
       }
 
+      // Force local state update IMMEDIATELY
       setDocumentsSubmitted(true);
+
+      // Re-run Check Auth to verify 'The Judge' agrees
+      setTimeout(() => {
+        checkAuth();
+      }, 1000);
+
       toast({
         title: "Documents Sent! 📄✅",
         description: "Your account is now under review. Please wait for approval.",
