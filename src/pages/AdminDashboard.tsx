@@ -11,29 +11,60 @@ import { DriverDetailDrawer } from "@/components/admin/DriverDetailDrawer";
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+
+    // Server-Side Data State
     const [users, setUsers] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        total_drivers: 0,
+        pending_verification: 0,
+        active_subscriptions: 0,
+        expired_subscriptions: 0,
+        total_revenue: 0
+    });
+
+    // Pagination & Filter State
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending' | 'expired'>('all');
 
     // CRM State
     const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
-    const [showPendingOnly, setShowPendingOnly] = useState(false);
-    const [showExpiredOnly, setShowExpiredOnly] = useState(false); // New Filter
 
+    // 1. Fetch KPI Stats (Fast RPC)
+    const fetchStats = async () => {
+        const { data, error } = await supabase.rpc('get_dashboard_kpi');
+        if (data && !error) {
+            setStats(data);
+        }
+    };
+
+    // 2. Fetch Users Paginated (Smart RPC)
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            console.log("Fetching users...");
-            // Fetch ALL users to be safe, then filter in UI to avoid RLS confusion
-            // Also helps debug if 'role' is wrong
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .order('created_at', { ascending: false });
+            console.log(`Fetching page ${page} with filter ${statusFilter}...`);
+
+            const { data, error } = await supabase.rpc('get_admin_users_paginated', {
+                page_number: page,
+                page_size: 20,
+                search_query: search,
+                status_filter: statusFilter
+            });
 
             if (error) throw error;
+
             console.log("Fetched users:", data?.length);
             setUsers(data || []);
+
+            // Get total count from first row (window function)
+            if (data && data.length > 0) {
+                setTotalCount(data[0].total_count);
+            } else {
+                setTotalCount(0); // No results
+            }
+
         } catch (error: any) {
             console.error("Error:", error);
             toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -42,13 +73,21 @@ const AdminDashboard = () => {
         }
     };
 
+    // Effects
     useEffect(() => {
         checkAdmin();
-        fetchUsers();
-    }, []);
+        fetchStats();
+    }, []); // Init only
+
+    useEffect(() => {
+        // Debounce search could go here, but for now direct call
+        const timer = setTimeout(() => {
+            fetchUsers();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [page, search, statusFilter]);
 
     const checkAdmin = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
         // Direct Access Mode: No strict auth check
         // if (!session) navigate("/admin");
     };
@@ -58,59 +97,12 @@ const AdminDashboard = () => {
         navigate("/admin");
     };
 
-    // Filter Logic
-    const filteredUsers = users.filter(user => {
-        // 1. Base Filter: Must be Driver
-        if (user.role !== 'driver') return false;
-
-        // 2. Search Filter
-        const matchesSearch = (
-            user.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-            user.phone?.includes(search) ||
-            user.email?.toLowerCase().includes(search.toLowerCase())
-        );
-
-        // 3. Pending Filter (Action Center)
-        if (showPendingOnly) {
-            return matchesSearch && (!user.is_verified && user.documents_submitted && !user.subscription_end_date); // Pending = New Docs, No history
-        }
-
-        // 4. Expired Filter (Unpaid)
-        if (showExpiredOnly) {
-            // Expired = Has date AND (date < now OR is_verified=false with date)
-            // Basically anyone we need to collect money from.
-            const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
-            if (!subEnd) return false; // No date = Free/New (handled by Pending)
-            return matchesSearch && (subEnd < new Date() || !user.is_verified);
-        }
-
-        return matchesSearch;
-    });
-
-    // Helpers for Counts
-    const pendingCount = users.filter(u => u.role === 'driver' && !u.is_verified && u.documents_submitted && !u.subscription_end_date).length;
-
-    const expiredCount = users.filter(u => {
-        if (u.role !== 'driver' || !u.subscription_end_date) return false;
-        const subEnd = new Date(u.subscription_end_date);
-        // Count if expired OR if manually suspended (unverified even if date is future)
-        return subEnd < new Date() || !u.is_verified;
-    }).length;
-
-    // Helper to calculate days left
-    const getDaysLeft = (dateStr: string | null) => {
-        if (!dateStr) return 0;
-        const end = new Date(dateStr).getTime();
-        const now = new Date().getTime();
-        const diff = end - now;
-        if (diff < 0) return 0;
-        return Math.ceil(diff / (1000 * 60 * 60 * 24));
-    };
-
-    const enforcePremiumReset = async () => {
+    const handleEnforcePremiumReset = async () => {
         if (!confirm("⚠️ ENFORCE PREMIUM RESET? ⚠️\n\nThis will:\n1. KICK OUT all drivers.\n2. ERASE their current verification.\n3. FORCE them to re-upload documents & pay.\n\nAre you sure?")) return;
         try {
-            const { error } = await supabase.from('users')
+            // We can keep this Client-Side for now as it's rare, or wrap in RPC.
+            // Keeping as client-side update for "Suspend" logic explanation.
+            await supabase.from('users')
                 .update({
                     is_verified: false,
                     documents_submitted: false,
@@ -120,12 +112,22 @@ const AdminDashboard = () => {
                 })
                 .eq('role', 'driver');
 
-            if (error) throw error;
             fetchUsers();
-            toast({ title: "Premium Reset Complete", description: "All drivers evicted. Entry requires new docs + payment." });
+            fetchStats();
+            toast({ title: "Premium Reset Complete", description: "All drivers evicted." });
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
         }
+    };
+
+    // Helper to calculate days left
+    const getDaysLeft = (dateStr: string | null) => {
+        if (!dateStr) return 0;
+        const end = new Date(dateStr).getTime();
+        const now = new Date().getTime();
+        const diff = end - now;
+        if (diff < 0) return 0;
+        return Math.ceil(diff / (1000 * 60 * 60 * 24));
     };
 
     return (
@@ -156,31 +158,31 @@ const AdminDashboard = () => {
                     {/* KPI / Filter Toggles */}
                     <div className="flex gap-4 w-full md:w-auto overflow-x-auto">
                         <button
-                            onClick={() => { setShowPendingOnly(false); setShowExpiredOnly(false); }}
-                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${!showPendingOnly ? 'bg-[#222] border-green-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                            onClick={() => { setStatusFilter('all'); setPage(1); }}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${statusFilter === 'all' ? 'bg-[#222] border-green-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
                         >
                             <span className="text-xs text-gray-500">All Drivers</span>
-                            <span className="text-xl font-bold text-white">{users.filter(u => u.role === 'driver').length}</span>
+                            <span className="text-xl font-bold text-white">{stats.total_drivers}</span>
                         </button>
 
                         <button
-                            onClick={() => { setShowPendingOnly(true); setShowExpiredOnly(false); }}
-                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showPendingOnly && !showExpiredOnly ? 'bg-[#2a1a1a] border-yellow-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                            onClick={() => { setStatusFilter('pending'); setPage(1); }}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${statusFilter === 'pending' ? 'bg-[#2a1a1a] border-yellow-500/50' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
                         >
                             <span className="text-xs text-gray-500 flex items-center gap-1">
-                                Pending {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />}
+                                Pending {stats.pending_verification > 0 && <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />}
                             </span>
-                            <span className="text-xl font-bold text-white">{pendingCount}</span>
+                            <span className="text-xl font-bold text-white">{stats.pending_verification}</span>
                         </button>
 
                         <button
-                            onClick={() => { setShowExpiredOnly(true); setShowPendingOnly(false); }}
-                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${showExpiredOnly ? 'bg-red-950/30 border-red-500/80 ring-1 ring-red-500/20' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
+                            onClick={() => { setStatusFilter('expired'); setPage(1); }}
+                            className={`flex flex-col items-start p-3 rounded-lg border min-w-[140px] transition-all ${statusFilter === 'expired' ? 'bg-red-950/30 border-red-500/80 ring-1 ring-red-500/20' : 'bg-[#111] border-[#333] hover:border-[#444]'}`}
                         >
                             <span className="text-xs text-gray-500 flex items-center gap-1">
-                                Expired / Unpaid {expiredCount > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
+                                Expired / Unpaid {stats.expired_subscriptions > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                             </span>
-                            <span className="text-xl font-bold text-white">{expiredCount}</span>
+                            <span className="text-xl font-bold text-white">{stats.expired_subscriptions}</span>
                         </button>
                     </div>
 
@@ -214,18 +216,18 @@ const AdminDashboard = () => {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
+                                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
                                         Loading Operations Center...
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredUsers.length === 0 ? (
+                            ) : users.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-gray-500">
+                                    <TableCell colSpan={6} className="text-center py-10 text-gray-500">
                                         No drivers found in this view.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredUsers.map(user => (
+                                users.map(user => (
                                     <TableRow
                                         key={user.id}
                                         className="border-[#333] hover:bg-[#222] cursor-pointer group transition-colors"

@@ -52,6 +52,9 @@ const CustomerDashboard = () => {
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [showRating, setShowRating] = useState(false);
 
+  // State to track rejected drivers for the current search session
+  const [rejectedDriverIds, setRejectedDriverIds] = useState<string[]>([]);
+
   // ===========================================
   // 1. Initialization & Restoration
   // ===========================================
@@ -387,9 +390,14 @@ const CustomerDashboard = () => {
     if (destination && userLocation && rideStatus === 'idle') calculateRoute();
   }, [destination]);
 
-  const findNearestDriver = async (ignoreList: string[] = []) => {
+  // Function to search drivers, accepting an explicit exclude list to bypass state batching delay
+  const findNearestDriver = async (explicitExcludeList: string[] | null = null) => {
     setIsSearchingDriver(true);
     setCandidateDriver(null);
+
+    // Valid exclusion list: either the passed explicit one (priority) or the current state
+    const exclusionList = explicitExcludeList || rejectedDriverIds;
+
     try {
       if (!userLocation) {
         toast({ title: "خطأ", description: "لم يتم تحديد موقعك الحالي", variant: "destructive" });
@@ -398,6 +406,7 @@ const CustomerDashboard = () => {
       }
 
       console.log("Searching for drivers near:", userLocation);
+      console.log("Excluding drivers:", exclusionList);
 
       // Call the Server-Side Matcher (PostGIS)
       // This is much faster and scalable than fetching all users
@@ -405,7 +414,8 @@ const CustomerDashboard = () => {
         client_lat: userLocation[0],
         client_long: userLocation[1],
         radius_km: 10,  // 10km Radius
-        limit_count: 5  // Get top 5
+        limit_count: 5,  // Get top 5
+        excluded_driver_ids: exclusionList // Pass the blacklist
       });
 
       if (error) throw error;
