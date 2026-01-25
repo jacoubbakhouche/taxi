@@ -252,31 +252,58 @@ const DriverDashboard = () => {
         .eq('auth_id', session.user.id)
         .maybeSingle();
 
+
+      // 0. FETCH GLOBAL SETTINGS
+      const { data: settings } = await supabase
+        .from('app_settings')
+        .select('premium_mode_enabled')
+        .maybeSingle();
+
+      const isPremiumMode = settings?.premium_mode_enabled ?? false; // Default to Free if not set? Or True? Let's assume False (Freemium) if missing to be safe, or True.
+      // Let's assume the migration created a row. If not, maybe default to what matches the business goal. I'll default to 'false' (Freemium) as fallback.
+
       if (!result.error && result.data) {
         user = result.data;
-        setUserId(user.id); // Critical Fix: Ensure userId is set in state!
+        setUserId(user.id);
       }
 
       if (!user) {
         console.error("User profile not found");
-        // Handle missing profile logic if needed or just return
-        // But sticking to the pasted structure:
+        return;
       }
 
-      // 1. CHECK DOCUMENTS / VERIFICATION
+      // 0.5 CHECK SUSPENSION (Always Enforced)
+      if (user.is_suspended) {
+        console.log("User is SUSPENDED -> Blocking access");
+        setIsSubscriptionExpired(true); // Re-use the red screen
+        return;
+      }
+
+      // FREEMIUM LOGIC BRANCH
+      if (!isPremiumMode) {
+        console.log("FREEMIUM MODE ACTIVE: Skipping Verification & Sub Checks");
+        // In Freemium, we allow access even if not verified or sub is null.
+        // We might still want to prompt for docs, but NOT BLOCK.
+        // However, the prompt says "allow access regardless".
+        // So we set valid flags.
+        setIsVerified(true);
+        setIsSubscriptionExpired(false);
+        setIsOnline(user.is_online || false);
+        return;
+      }
+
+      // === PREMIUM MODE (Strict Checks) ===
+
       // 1. CHECK DOCUMENTS / VERIFICATION
       if (!user.is_verified) {
-        console.log("User not verified - Blocking access");
+        console.log("User not verified (Premium Mode) - Blocking access");
 
         // Special Case: Blocked/Suspended User 
         // If they submitted docs effectively (or were previously verified) AND have ANY subscription date set (even if valid),
         // it means they are an EXISTING driver who was Suspended by Admin.
         // Show Red Screen (Contact Admin) instead of Yellow (Under Review).
         const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
-        const now = new Date();
 
-        // Logic: Has sub date (Existing) AND Unverified (Suspended) -> Red Screen
-        // (Note: Fresh applicants have subEnd = null)
         if (user.documents_submitted && subEnd) {
           console.log("User unverified BUT has subscription date (Suspended) -> Show Red Screen");
           setIsSubscriptionExpired(true);
@@ -303,7 +330,6 @@ const DriverDashboard = () => {
       }
 
       setIsSubscriptionExpired(false);
-
       setIsVerified(true);
       setIsOnline(user.is_online || false);
     } catch (error) {

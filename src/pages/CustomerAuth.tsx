@@ -65,12 +65,26 @@ const CustomerAuth = () => {
           navigate("/customer/dashboard");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: { user }, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
 
         if (error) throw error;
+
+        // Force Role Check
+        if (user) {
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('auth_id', user.id)
+            .single();
+
+          if (profileError || !userProfile || userProfile.role !== 'customer') {
+            await supabase.auth.signOut();
+            throw new Error("هذا الحساب خاص بالسائقين، يرجى استخدام تطبيق السائق / This is a driver account");
+          }
+        }
 
         toast({
           title: "تم تسجيل الدخول بنجاح",
