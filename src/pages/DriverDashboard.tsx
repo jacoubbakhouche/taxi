@@ -159,7 +159,7 @@ const DriverDashboard = () => {
         console.log("Found ACTIVE ride on resume:", activeRide);
         setCurrentRide(activeRide);
 
-        // Fetch customer info for this active ride
+        // Fetch customer info for this active ride with REAL rating
         if (activeRide.customer_id) {
           const { data: customerData } = await supabase
             .from('users')
@@ -168,7 +168,22 @@ const DriverDashboard = () => {
             .single();
 
           if (customerData) {
-            setCustomerInfo(customerData);
+            // Fetch REAL average rating from reviews table for this CUSTOMER
+            const { data: reviews } = await supabase
+              .from('reviews')
+              .select('rating')
+              .eq('reviewee_id', customerData.id);
+
+            let calculatedRating = 5.0;
+            if (reviews && reviews.length > 0) {
+              const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+              calculatedRating = total / reviews.length;
+            }
+
+            setCustomerInfo({
+              ...customerData,
+              rating: calculatedRating
+            });
             setCustomerLocation([activeRide.pickup_lat, activeRide.pickup_lng]);
             setDestinationLocation([activeRide.destination_lat, activeRide.destination_lng]);
           }
@@ -217,7 +232,7 @@ const DriverDashboard = () => {
             console.log("Found existing pending ride:", closestRide);
             setPendingRide(closestRide);
 
-            // Fetch customer info
+            // Fetch customer info with REAL rating calc
             const { data: customerData } = await supabase
               .from('users')
               .select('id, full_name, phone, rating, total_rides, profile_image')
@@ -225,7 +240,22 @@ const DriverDashboard = () => {
               .single();
 
             if (customerData) {
-              setCustomerInfo(customerData);
+              // Fetch REAL average rating from reviews table for this CUSTOMER
+              const { data: reviews } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('reviewee_id', customerData.id);
+
+              let calculatedRating = 5.0;
+              if (reviews && reviews.length > 0) {
+                const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+                calculatedRating = total / reviews.length;
+              }
+
+              setCustomerInfo({
+                ...customerData,
+                rating: calculatedRating // Override with real calculation
+              });
             }
             setIsSheetExpanded(true);
           }
