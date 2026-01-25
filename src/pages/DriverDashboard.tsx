@@ -241,99 +241,76 @@ const DriverDashboard = () => {
 
   const checkAuth = async () => {
     try {
-      // ... (existing auth check init) ...
       const { data: { session } } = await supabase.auth.getSession();
-
-      // ... (existing user fetch) ...
-      let user = null;
-      const result = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', session.user.id)
-        .maybeSingle();
-
-
-      // 0. FETCH GLOBAL SETTINGS
-      const { data: settings } = await supabase
-        .from('app_settings')
-        .select('premium_mode_enabled')
-        .maybeSingle();
-
-      const isPremiumMode = settings?.premium_mode_enabled ?? false; // Default to Free if not set? Or True? Let's assume False (Freemium) if missing to be safe, or True.
-      // Let's assume the migration created a row. If not, maybe default to what matches the business goal. I'll default to 'false' (Freemium) as fallback.
-
-      if (!result.error && result.data) {
-        user = result.data;
-        setUserId(user.id);
-      }
-
-      if (!user) {
-        console.error("User profile not found");
+      if (!session) {
+        navigate("/driver/auth");
         return;
       }
 
-      // 0.5 CHECK SUSPENSION (Always Enforced)
-      if (user.is_suspended) {
-        console.log("User is SUSPENDED -> Blocking access");
-        setIsSubscriptionExpired(true); // Re-use the red screen
+      // 1. CALL THE JUDGE! ⚖️
+      const { data: status, error: judgeError } = await supabase.rpc('get_driver_status', {
+        driver_id: session.user.id
+      });
+
+      if (judgeError) {
+        console.error("Judge Error:", judgeError);
         return;
       }
 
-      // FREEMIUM LOGIC BRANCH
-      if (!isPremiumMode) {
-        console.log("FREEMIUM MODE ACTIVE: Skipping Verification & Sub Checks");
-        // In Freemium, we allow access even if not verified or sub is null.
-        // We might still want to prompt for docs, but NOT BLOCK.
-        // However, the prompt says "allow access regardless".
-        // So we set valid flags.
-        setIsVerified(true);
-        setIsSubscriptionExpired(false);
-        setIsOnline(user.is_online || false);
-        return;
-      }
+      console.log("DRIVER STATUS (THE JUDGE):", status);
 
-      // === PREMIUM MODE (Strict Checks) ===
+      // 2. EXECUTE THE VERDICT
+      switch (status) {
+        case 'active':
+          setIsVerified(true);
+          setIsSubscriptionExpired(false);
+          // Restore online state from profile if needed, or query users table separately
+          // For now, let's just ensure they are allowed in.
+          break;
 
-      // 1. CHECK DOCUMENTS / VERIFICATION
-      if (!user.is_verified) {
-        console.log("User not verified (Premium Mode) - Blocking access");
-
-        // Special Case: Blocked/Suspended User 
-        // If they submitted docs effectively (or were previously verified) AND have ANY subscription date set (even if valid),
-        // it means they are an EXISTING driver who was Suspended by Admin.
-        // Show Red Screen (Contact Admin) instead of Yellow (Under Review).
-        const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
-
-        if (user.documents_submitted && subEnd) {
-          console.log("User unverified BUT has subscription date (Suspended) -> Show Red Screen");
+        case 'suspended':
+          // Show Red Screen (Blocked)
           setIsSubscriptionExpired(true);
-          return;
-        }
+          // You might want to add a specific 'isSuspended' state for a custom message later
+          break;
 
-        setIsVerified(false);
-        // @ts-ignore
-        setDocumentsSubmitted(user.documents_submitted || false);
-        return;
+        case 'upload_documents':
+          // Show Upload UI
+          setIsVerified(false);
+          setDocumentsSubmitted(false);
+          break;
+
+        case 'pending_approval':
+          // Show Waiting UI
+          setIsVerified(false);
+          setDocumentsSubmitted(true);
+          break;
+
+        case 'payment_required':
+          // Show Payment Screen
+          setIsSubscriptionExpired(true);
+          break;
+
+        default:
+          // Safety Fallback
+          setIsVerified(false);
       }
 
-      // 2. CHECK SUBSCRIPTION
-      const now = new Date();
-      const subEnd = user.subscription_end_date ? new Date(user.subscription_end_date) : null;
+      // Fetch user data just for basic info (Name, Online status) 
+      // This is now secondary to the status check.
+      const { data: user } = await supabase
+        .from('users')
+        .select('is_online, id')
+        .eq('auth_id', session.user.id)
+        .single();
 
-      if (!subEnd || subEnd < now) {
-        console.log("Subscription expired:", user.subscription_end_date);
-        setIsSubscriptionExpired(true);
-        // We do NOT set isVerified=false here, because we want to show a DIFFERENT screen (Subscription Expired), 
-        // not the Upload Documents screen.
-        // Returning here prevents entering the dashboard.
-        return;
+      if (user) {
+        setUserId(user.id);
+        setIsOnline(user.is_online || false);
       }
 
-      setIsSubscriptionExpired(false);
-      setIsVerified(true);
-      setIsOnline(user.is_online || false);
     } catch (error) {
-      // ...
+      console.error("Auth Check Failed:", error);
     }
   };
 

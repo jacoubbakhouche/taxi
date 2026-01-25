@@ -79,26 +79,17 @@ const DriverAuth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
-      // 1. Upsert Profile Data (Create or Update)
-      const { error: updateError } = await supabase
-        .from('users')
-        .upsert({
-          auth_id: session.user.id,
-          full_name: fullName,
-          phone: phone,
-          is_driver_registered: true,
-          is_verified: true, // Free mode
-          role: 'driver', // Legacy compatibility
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'auth_id' }); // Ensure we match on auth_id if it's unique
+      // 1. Call Secure RPC to Complete Profile
+      // This bypasses RLS issues by running on the server with elevated privileges
+      const { error: rpcError } = await supabase.rpc('complete_driver_profile', {
+        p_full_name: fullName,
+        p_phone: phone
+      });
 
-      if (updateError) {
-        console.warn("Direct update/upsert failed", updateError);
-        throw updateError;
+      if (rpcError) {
+        console.error("RPC Failed", rpcError);
+        throw rpcError;
       }
-
-      // Double check via RPC just in case (optional, but good for hybrid logic sync)
-      // await supabase.rpc('register_as_driver'); 
 
       toast({ title: "Welcome to the Fleet! 🚕", description: "Registration successful." });
       navigate("/driver/dashboard");
