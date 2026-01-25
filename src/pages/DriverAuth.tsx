@@ -79,29 +79,26 @@ const DriverAuth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No session found");
 
-      // 1. Update Profile Data
+      // 1. Upsert Profile Data (Create or Update)
       const { error: updateError } = await supabase
         .from('users')
-        .update({
+        .upsert({
+          auth_id: session.user.id,
           full_name: fullName,
           phone: phone,
-          // We can set is_driver_registered directly here via RLS if policy allows, 
-          // OR use the RPC. Let's use RPC for safety/consistency if RLS is strict.
-          // For now, let's try direct update first as it's simpler if RLS allows 'UPDATE own profile'.
           is_driver_registered: true,
-          is_verified: true // Free mode assumption
-        })
-        .eq('auth_id', session.user.id);
+          is_verified: true, // Free mode
+          role: 'driver', // Legacy compatibility
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'auth_id' }); // Ensure we match on auth_id if it's unique
 
       if (updateError) {
-        // Fallback to RPC if direct update fails
-        console.warn("Direct update failed, trying RPC...", updateError);
-        const { error: rpcError } = await supabase.rpc('register_as_driver');
-        if (rpcError) throw rpcError;
-
-        // Update info separately if RPC didn't do it
-        await supabase.from('users').update({ full_name: fullName, phone: phone }).eq('auth_id', session.user.id);
+        console.warn("Direct update/upsert failed", updateError);
+        throw updateError;
       }
+
+      // Double check via RPC just in case (optional, but good for hybrid logic sync)
+      // await supabase.rpc('register_as_driver'); 
 
       toast({ title: "Welcome to the Fleet! 🚕", description: "Registration successful." });
       navigate("/driver/dashboard");
