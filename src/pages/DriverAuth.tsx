@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,231 +7,196 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Car, ArrowLeft, Loader2 } from "lucide-react";
-import { z } from "zod";
-
-const authSchema = z.object({
-  fullName: z.string().min(3, "الاسم يجب أن يكون 3 أحرف على الأقل"),
-  email: z.string().email("البريد الإلكتروني غير صحيح"),
-  phone: z.string().min(10, "رقم الهاتف غير صحيح"),
-  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
-});
+import { Car, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 
 const DriverAuth = () => {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    password: "",
-  });
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [view, setView] = useState<'login' | 'onboarding'>('login');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Onboarding Data
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    checkDriverStatus();
+  }, []);
+
+  const checkDriverStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setCheckingSession(false);
+        return;
+      }
+
+      // Check Profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_driver_registered, full_name, phone')
+        .eq('auth_id', session.user.id)
+        .single();
+
+      if (profile?.is_driver_registered) {
+        navigate("/driver/dashboard");
+      } else {
+        // Logged in but NOT functionality a driver yet
+        // Pre-fill form if data exists (e.g. from Customer profile)
+        if (profile?.full_name) setFullName(profile.full_name);
+        if (profile?.phone) setPhone(profile.phone);
+        setView('onboarding');
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCheckingSession(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/driver/auth`, // Redirect back here to check status
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setLoading(false);
+    }
+  };
+
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (!isLogin) {
-        const validated = authSchema.parse(formData);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session found");
 
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: validated.email,
-          password: validated.password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/driver/dashboard`,
-          },
-        });
+      // 1. Update Profile Data
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          full_name: fullName,
+          phone: phone,
+          // We can set is_driver_registered directly here via RLS if policy allows, 
+          // OR use the RPC. Let's use RPC for safety/consistency if RLS is strict.
+          // For now, let's try direct update first as it's simpler if RLS allows 'UPDATE own profile'.
+          is_driver_registered: true,
+          is_verified: true // Free mode assumption
+        })
+        .eq('auth_id', session.user.id);
 
-        if (authError) throw authError;
+      if (updateError) {
+        // Fallback to RPC if direct update fails
+        console.warn("Direct update failed, trying RPC...", updateError);
+        const { error: rpcError } = await supabase.rpc('register_as_driver');
+        if (rpcError) throw rpcError;
 
-        if (authData.user) {
-          const { error: userError } = await supabase
-            .from("users")
-            .insert({
-              auth_id: authData.user.id,
-              full_name: validated.fullName,
-              phone: validated.phone,
-              role: "driver",
-              is_verified: true, // Phase 1: Free Entry (Can work immediately)
-              subscription_end_date: null // Null means "Free Mode" until Admin intervenes
-            });
-
-          if (userError) throw userError;
-
-          toast({
-            title: "تم التسجيل بنجاح",
-            description: "مرحباً بك في Taxi DZ",
-          });
-          navigate("/driver/dashboard");
-        }
-      } else {
-        const { data: { user }, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        // Force Role Check
-        if (user) {
-          const { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('auth_id', user.id)
-            .single();
-
-          if (profileError || !userProfile || userProfile.role !== 'driver') {
-            await supabase.auth.signOut();
-            throw new Error("هذا الحساب ليس مسجلاً كحساب سائق / Not a driver account");
-          }
-        }
-
-        toast({
-          title: "تم تسجيل الدخول بنجاح",
-          description: "أهلاً بعودتك",
-        });
-        navigate("/driver/dashboard");
+        // Update info separately if RPC didn't do it
+        await supabase.from('users').update({ full_name: fullName, phone: phone }).eq('auth_id', session.user.id);
       }
+
+      toast({ title: "Welcome to the Fleet! 🚕", description: "Registration successful." });
+      navigate("/driver/dashboard");
+
     } catch (error: any) {
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ ما",
-        variant: "destructive",
-      });
+      toast({ title: "Registration Failed", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  if (checkingSession) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
+  }
+
   return (
     <div className="min-h-screen bg-[#111111] text-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
-
-      {/* Background Ambience */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#84cc16]/5 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
       <Card className="w-full max-w-md bg-[#1A1A1A] border border-[#333] shadow-2xl p-8 space-y-8 relative z-10 animate-in fade-in zoom-in duration-500">
 
-        {/* Header Section */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-full flex justify-between items-start absolute top-6 left-6 right-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/role-selection")}
-              className="text-[#666] hover:text-white hover:bg-white/5 rounded-full"
-            >
+        {view === 'login' ? (
+          <>
+            <button onClick={() => navigate("/role-selection")} className="absolute top-6 left-6 text-[#666] hover:text-white">
               <ArrowLeft className="w-6 h-6" />
-            </Button>
-          </div>
-
-          <div className="w-20 h-20 rounded-2xl bg-[#222] border border-[#333] flex items-center justify-center shadow-lg mb-2">
-            <Car className="w-10 h-10 text-[#84cc16]" />
-          </div>
-
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              {isLogin ? "Welcome Back" : "Join Fleet"}
-            </h1>
-            <p className="text-sm text-[#888]">
-              Driver Portal
-            </p>
-          </div>
-        </div>
-
-        {/* Form Section */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-xs font-medium text-[#666] uppercase tracking-wider">Full Name</Label>
-              <Input
-                id="fullName"
-                placeholder="Your full name"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                required
-                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
-                dir="auto"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs font-medium text-[#666] uppercase tracking-wider">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
-            />
-          </div>
-
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-xs font-medium text-[#666] uppercase tracking-wider">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="055 123 4567"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                required
-                className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
-                dir="ltr"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-xs font-medium text-[#666] uppercase tracking-wider">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              className="bg-[#111] border-[#333] text-white placeholder:text-[#444] focus:border-[#84cc16] focus:ring-1 focus:ring-[#84cc16] h-12 rounded-xl transition-all"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 bg-[#84cc16] hover:bg-[#FCC419] text-black font-bold text-lg rounded-xl shadow-[0_4px_20px_rgba(245,216,72,0.2)] hover:shadow-[0_4px_25px_rgba(245,216,72,0.4)] transition-all duration-300"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              isLogin ? "Sign In" : "Register as Driver"
-            )}
-          </Button>
-        </form>
-
-        {/* Footer Toggle */}
-        <div className="text-center">
-          <p className="text-[#666] text-sm">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-[#84cc16] font-semibold hover:underline transition-all"
-            >
-              {isLogin ? "Sign Up" : "Log In"}
             </button>
-          </p>
-        </div>
+
+            <div className="flex flex-col items-center space-y-4 pt-4">
+              <div className="w-20 h-20 rounded-2xl bg-[#222] border border-[#333] flex items-center justify-center shadow-lg mb-2">
+                <Car className="w-10 h-10 text-[#84cc16]" />
+              </div>
+              <div className="text-center space-y-1">
+                <h1 className="text-2xl font-bold tracking-tight text-white">Driver Portal</h1>
+                <p className="text-sm text-[#888]">Join the best fleet in town</p>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full h-12 bg-white hover:bg-gray-100 text-black font-bold text-lg rounded-xl flex items-center justify-center gap-3"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : (
+                <>
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                  Continue with Google
+                </>
+              )}
+            </Button>
+          </>
+        ) : (
+          <form onSubmit={handleCompleteRegistration} className="space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-[#84cc16]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-[#84cc16]" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Final Step</h2>
+              <p className="text-sm text-gray-400">Complete your profile to start driving</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="uppercase text-xs font-bold text-gray-500 ml-1">Full Name</Label>
+                <Input
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  className="bg-[#111] border-[#333] h-12 text-lg"
+                  placeholder="e.g. Mohammed Amine"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="uppercase text-xs font-bold text-gray-500 ml-1">Phone Number</Label>
+                <Input
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="bg-[#111] border-[#333] h-12 text-lg font-mono"
+                  placeholder="055 123 4567"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-[#84cc16] hover:bg-[#72b313] text-black font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(132,204,22,0.3)] transition-all"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : "Complete Registration"}
+            </Button>
+          </form>
+        )}
 
       </Card>
-
-      {/* Footer Branding */}
-      <div className="absolute bottom-6 text-[#333] text-xs font-mono">
-        OFFICIAL DRIVER PARTNER • TAXI DZ
-      </div>
-
     </div>
   );
 };
