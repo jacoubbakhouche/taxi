@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Star, Car, Award } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 
 interface DriverData {
     full_name: string;
@@ -70,11 +71,7 @@ const DriverProfileView = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[#1A1A1A]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#84cc16] mx-auto"></div>
-            </div>
-        );
+        return <ProfileSkeleton />;
     }
 
     if (!driver) {

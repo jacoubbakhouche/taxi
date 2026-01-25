@@ -15,19 +15,27 @@ import DriverProfile from "./pages/DriverProfile";
 import DriverProfileView from "./pages/DriverProfileView";
 import LocationPermission from "./pages/LocationPermission";
 import NotFound from "./pages/NotFound";
-import AdminAuth from "./pages/AdminAuth";
-import AdminDashboard from "./pages/AdminDashboard";
+
+import { SplashScreen } from "./components/SplashScreen";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
   console.log("App initialized"); // Debug log force rebuild
   console.log("App component rendering...");
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
+
+        {/* Splash Screen Overlay */}
+        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -40,9 +48,6 @@ const App = () => {
             <Route path="/driver/profile" element={<DriverProfile />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
             <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
-            {/* Admin Routes - Direct Access Mode (No Auth) */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/location-permission" element={<LocationPermission />} />
             <Route path="*" element={<NotFound />} />
@@ -51,7 +56,6 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
-
 };
 
 export default App;

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Star, MapPin, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ProfileSkeleton } from "@/components/ProfileSkeleton";
 
 interface CustomerData {
   full_name: string;
@@ -79,11 +80,7 @@ const CustomerProfileView = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">جاري التحميل...</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!customer) {
