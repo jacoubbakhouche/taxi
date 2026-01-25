@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Car, Phone, Calendar, Star, DollarSign, MapPin,
-    FileText, CheckCircle, XCircle, AlertTriangle, Clock
+    FileText, CheckCircle, XCircle, AlertTriangle, Clock, Edit
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,7 +164,51 @@ export const DriverDetailDrawer = ({ driver, open, onClose, onUpdate }: DriverDr
                             <span className="text-lg font-bold text-white">{stats.rides}</span>
                         </CardContent>
                     </Card>
-                    <Card className="bg-[#161616] border-[#333]">
+                    <Card className="bg-[#161616] border-[#333] relative group">
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-white">
+                                        <Edit className="w-4 h-4" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-[#111] border-[#333] text-white">
+                                    <div className="space-y-4">
+                                        <h3 className="font-bold">Modify Subscription</h3>
+                                        <p className="text-sm text-gray-400">Set a custom expiration date for {driver.full_name}.</p>
+                                        <input
+                                            type="datetime-local"
+                                            className="w-full bg-[#222] border border-[#333] p-2 rounded text-white"
+                                            onChange={(e) => {
+                                                // Store in a temp var or ref logic, or just handle in Button below
+                                                // For simplicity, let's use ID lookups or state if we refactor to full component.
+                                                // Since we are inside a map or prop, state is tricky without a sub-component.
+                                                // Let's use ID for the input.
+                                            }}
+                                            id="new-sub-date"
+                                        />
+                                        <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={async () => {
+                                            const input = document.getElementById('new-sub-date') as HTMLInputElement;
+                                            if (!input.value) return;
+                                            const date = new Date(input.value);
+
+                                            await supabase.from('users').update({
+                                                subscription_end_date: date.toISOString(),
+                                                is_verified: true
+                                            }).eq('id', driver.id);
+
+                                            toast({ title: "Subscription Updated" });
+                                            onUpdate();
+                                            onClose(); // Close drawer? Or just dialog? Dialog is inside content, tricky. 
+                                            // Actually DialogContent is portalled, so it works. 
+                                            // Ideally we close the Dialog.
+                                        }}>
+                                            Save Changes
+                                        </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                         <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                             <span className="text-xs text-gray-500 mb-1">Subscription</span>
                             {/* Calculate Days */}
