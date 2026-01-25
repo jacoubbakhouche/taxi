@@ -61,8 +61,10 @@ const RideRequestCard = ({
   return (
     <motion.div
       drag="y"
-      dragConstraints={{ top: 0, bottom: 0 }} // Don't let it fly away, just detect gesture
-      dragElastic={0.2} // Rubber band effect
+      // If expanded: Allow drag DOWN (positive), constrain UP
+      // If collapsed: Allow drag UP (negative), constrain DOWN
+      dragConstraints={isExpanded ? { top: 0, bottom: 300 } : { top: -300, bottom: 0 }}
+      dragElastic={0.05} // Stiff elastic at the restricted ends
       onDragEnd={handleDragEnd}
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
