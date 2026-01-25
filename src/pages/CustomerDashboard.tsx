@@ -713,26 +713,7 @@ const CustomerDashboard = () => {
       )}
 
       {/* --- Candidate Driver Popup --- */}
-      {candidateDriver && !isSearchingDriver && rideStatus === 'idle' && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-card w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
-            <h3 className="text-center font-bold text-lg">سائق مقترح</h3>
-            <div className="flex items-center gap-4 bg-secondary/20 p-3 rounded-2xl">
-              <div className="w-14 h-14 rounded-full bg-gray-200 overflow-hidden">
-                <img src={candidateDriver.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${candidateDriver.id}`} className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <p className="font-bold">{candidateDriver.full_name}</p>
-                <p className="text-xs text-muted-foreground">★ {candidateDriver.rating?.toFixed(1) || 5.0} • {candidateDriver.car_model}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => { setDeclinedDrivers(prev => [...prev, candidateDriver.id]); setCandidateDriver(null); findNearestDriver([candidateDriver.id]); }}>رفض</Button>
-              <Button onClick={handleRequestRide}>قبول</Button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* --- Pending State --- */}
       {/* --- Pending State (Radar Effect) --- */}
