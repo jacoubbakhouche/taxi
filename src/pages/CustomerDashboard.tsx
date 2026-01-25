@@ -442,7 +442,17 @@ const CustomerDashboard = () => {
       const { data: fullProfile } = await supabase.from('users').select('*').eq('id', closest.driver_id).single();
 
       if (fullProfile) {
-        setCandidateDriver(fullProfile);
+        // Fetch REAL total rides count from the rides table
+        const { count: realRideCount } = await supabase
+          .from('rides')
+          .select('*', { count: 'exact', head: true })
+          .eq('driver_id', fullProfile.id)
+          .eq('status', 'completed'); // Only count COMPLETED rides
+
+        setCandidateDriver({
+          ...fullProfile,
+          total_rides: realRideCount || 0 // Use real count, fallback to 0
+        });
       } else {
         // Fallback if fetch fails (rare)
         toast({ title: "Error", description: "Driver data error", variant: "destructive" });
@@ -625,9 +635,16 @@ const CustomerDashboard = () => {
             </div>
             <div>
               <h3 className="text-white font-bold text-lg">{candidateDriver.full_name}</h3>
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-400 text-sm">★ {candidateDriver.rating?.toFixed(1) || 5.0}</span>
-                <span className="text-gray-400 text-xs">• {candidateDriver.car_model || "Taxi"}</span>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1 bg-[#84cc16]/10 px-2 py-0.5 rounded-full">
+                  <span className="text-[#84cc16] text-xs font-bold">★ {candidateDriver.rating?.toFixed(1) || 5.0}</span>
+                </div>
+                <div className="text-gray-400 text-xs flex items-center gap-1">
+                  <span className="font-mono text-white/50">|</span>
+                  <span>{candidateDriver.total_rides || 0} رحلة</span>
+                  <span className="font-mono text-white/50">|</span>
+                  <span>{candidateDriver.car_model || "Taxi"}</span>
+                </div>
               </div>
             </div>
           </div>
