@@ -29,6 +29,9 @@ const AdminDashboard = () => {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending' | 'expired'>('all');
 
+    // Global Settings State
+    const [premiumMode, setPremiumMode] = useState(false);
+
     // CRM State
     const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
 
@@ -40,7 +43,13 @@ const AdminDashboard = () => {
         }
     };
 
-    // 2. Fetch Users Paginated (Smart RPC)
+    // 2. Fetch Global Settings
+    const fetchSettings = async () => {
+        const { data } = await supabase.from('app_settings').select('premium_mode_enabled').single();
+        if (data) setPremiumMode(data.premium_mode_enabled);
+    };
+
+    // 3. Fetch Users Paginated (Smart RPC)
     const fetchUsers = async () => {
         setLoading(true);
         try {
@@ -77,6 +86,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         checkAdmin();
         fetchStats();
+        fetchSettings();
     }, []); // Init only
 
     useEffect(() => {
@@ -133,6 +143,7 @@ const AdminDashboard = () => {
     return (
         <div className="min-h-screen bg-black text-white font-sans">
             {/* Header */}
+            {/* Header */}
             <header className="bg-[#111] border-b border-[#333] p-4 flex justify-between items-center sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="text-green-500" />
@@ -141,10 +152,26 @@ const AdminDashboard = () => {
                         <p className="text-[10px] text-gray-500">Taxi DZ Admin</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={enforcePremiumReset} className="text-white border-red-500/50 bg-red-900/40 hover:bg-red-600 font-bold animate-pulse">
-                        <AlertTriangle className="w-4 h-4 mr-2" /> Enforce Premium Mode
-                    </Button>
+                <div className="flex gap-4 items-center">
+                    {/* Premium Mode Toggle */}
+                    <div className="flex items-center gap-2 bg-[#222] p-1.5 rounded-full border border-[#333] px-3">
+                        <span className={`text-xs font-bold ${!premiumMode ? 'text-green-400' : 'text-gray-500'}`}>Freemium</span>
+                        <div
+                            className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${premiumMode ? 'bg-red-500' : 'bg-green-600'}`}
+                            onClick={async () => {
+                                const newVal = !premiumMode;
+                                // Optimistic UI
+                                setPremiumMode(newVal);
+                                // RPC Call
+                                await supabase.rpc('admin_toggle_premium_mode', { enable: newVal });
+                                toast({ title: newVal ? "Premium Mode ACTIVATED 🔒" : "Freemium Mode ACTIVATED 🆓", property: "System Updated" });
+                            }}
+                        >
+                            <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${premiumMode ? 'left-6' : 'left-1'}`} />
+                        </div>
+                        <span className={`text-xs font-bold ${premiumMode ? 'text-red-400' : 'text-gray-500'}`}>Premium</span>
+                    </div>
+
                     <Button variant="outline" size="sm" onClick={handleLogout} className="text-white border-[#444] hover:bg-[#222]">
                         <LogOut className="w-4 h-4 mr-1" /> Logout
                     </Button>
