@@ -443,15 +443,32 @@ const CustomerDashboard = () => {
 
       if (fullProfile) {
         // Fetch REAL total rides count from the rides table
+        // 1. Fetch REAL total rides count from the rides table
         const { count: realRideCount } = await supabase
           .from('rides')
           .select('*', { count: 'exact', head: true })
           .eq('driver_id', fullProfile.id)
-          .eq('status', 'completed'); // Only count COMPLETED rides
+          .eq('status', 'completed');
+
+        // 2. Fetch REAL average rating from reviews table
+        // We can't use .avg() directly in simple client SDK on foreign table easily without RPC, 
+        // but we can fetch all ratings and average them (assuming reasonable count < 1000 for client side or use RPC for scale).
+        // For scalability, an RPC 'get_driver_stats' is better, but here we do client-side for immediate fix as requested.
+        const { data: reviews } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('reviewee_id', fullProfile.id);
+
+        let calculatedRating = 5.0;
+        if (reviews && reviews.length > 0) {
+          const total = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+          calculatedRating = total / reviews.length;
+        }
 
         setCandidateDriver({
           ...fullProfile,
-          total_rides: realRideCount || 0 // Use real count, fallback to 0
+          total_rides: realRideCount || 0,
+          rating: calculatedRating // OVERRIDE user.rating with calculated one
         });
       } else {
         // Fallback if fetch fails (rare)
