@@ -44,8 +44,6 @@ const CustomerDashboard = () => {
   const [route, setRoute] = useState<[number, number][]>([]);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [distance, setDistance] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [price, setPrice] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(0); // For Hybrid Logic
   const [isPriceModified, setIsPriceModified] = useState(false); // Robust Hybrid Flag
@@ -391,6 +389,10 @@ const CustomerDashboard = () => {
     setEstimatedPrice(calcPrice); // Store original for comparison
     setIsPriceModified(false); // Reset to Standard Mode
     setRoute([userLocation, destination]);
+
+    // Fetch pickup address for UI
+    const pAddr = await getPlaceName(userLocation[0], userLocation[1]);
+    setPickupAddress(pAddr);
   };
 
   useEffect(() => {
