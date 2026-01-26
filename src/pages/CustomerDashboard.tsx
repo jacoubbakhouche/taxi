@@ -494,33 +494,51 @@ const CustomerDashboard = () => {
   const handleRequestRide = async () => {
     if (!userId || !destination) return;
 
+    // HYBRID LOGIC: 
+    const isBidding = Math.abs(price - estimatedPrice) > 1;
+
+    // 1. Standard Ride Flow: First find a candidate
+    if (!isBidding && !candidateDriver) {
+      findNearestDriver([]);
+      return;
+    }
+
     try {
-      // Insert with NO driver_id initially (Open Request)
-      // And with customer_offer_price
-      const { data, error } = await supabase.from('rides').insert({
+      // 2. Insert Ride
+      // If candidate exists (Standard), target them.
+      // If Bidding, target no one (Open).
+      const insertPayload = {
         customer_id: userId,
-        // driver_id: null, // Open to all
+        driver_id: candidateDriver ? candidateDriver.id : null,
         pickup_lat: userLocation![0],
         pickup_lng: userLocation![1],
         destination_lat: destination[0],
         destination_lng: destination[1],
         pickup_address: await getPlaceName(userLocation![0], userLocation![1]),
         destination_address: searchQuery,
-        price: price, // Calculated Base Price
-        customer_offer_price: price, // Active Bid Price
-        is_bidding: Math.abs(price - estimatedPrice) > 1, // Hybrid Logic: Only bidding if price changed
+        price: price,
+        customer_offer_price: price,
+        is_bidding: isBidding,
         distance: distance,
         duration: duration,
         status: 'pending'
-      }).select().single();
+      };
+
+      const { data, error } = await supabase.from('rides').insert(insertPayload).select().single();
 
       if (error) throw error;
 
       setCurrentRideId(data.id);
       setRideStatus('pending');
-      setCandidateDriver(null);
 
-      toast({ title: "تم نشر الطلب", description: "بانتظار عروض السائقين..." });
+      // If Bidding, we clear candidate to show Offers List
+      // If Standard, we KEEP candidate to show "Waiting for Ahmed..."
+      if (isBidding) {
+        setCandidateDriver(null);
+        toast({ title: "تم نشر الطلب", description: "بانتظار عروض السائقين..." });
+      } else {
+        toast({ title: "تم إرسال الطلب", description: `بانتظار قبول ${candidateDriver.full_name}...` });
+      }
 
     } catch (e) {
       console.error(e);
@@ -729,7 +747,7 @@ const CustomerDashboard = () => {
 
       {/* --- Auction / Pending State --- */}
       {
-        rideStatus === 'pending' && currentRideId && (
+        rideStatus === 'pending' && currentRideId && !candidateDriver && (
           <DriverOffersList
             rideId={currentRideId}
             onAcceptOffer={async (offerId) => {
@@ -737,7 +755,6 @@ const CustomerDashboard = () => {
                 const { error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });
                 if (error) throw error;
                 setRideStatus('accepted');
-                // Driver info will update via realtime subscription or we can force fetch
                 toast({ title: "تم قبول العرض! 🎉", description: "السائق قادم إليك" });
               } catch (e) {
                 toast({ title: "فشل قبول العرض", variant: "destructive" });
@@ -745,6 +762,24 @@ const CustomerDashboard = () => {
             }}
             onCancelRide={handleCancelRide}
           />
+        )
+      }
+
+      {/* --- Standard Ride "Waiting" State --- */}
+      {
+        rideStatus === 'pending' && currentRideId && candidateDriver && (
+          <div className="fixed bottom-0 left-0 right-0 z-[1000] p-6 bg-[#1A1A1A] text-white rounded-t-3xl border-t border-white/10 animate-in slide-in-from-bottom-10">
+            <div className="flex flex-col items-center py-6 gap-4">
+              <Loader2 className="w-12 h-12 text-[#84cc16] animate-spin" />
+              <div className="text-center">
+                <h3 className="text-xl font-bold mb-1">بانتظار قبول السائق...</h3>
+                <p className="text-gray-400">لقد أرسلنا طلبك إلى {candidateDriver.full_name}</p>
+              </div>
+              <Button variant="outline" className="w-full mt-2 border-red-500/20 text-red-500 hover:bg-red-500/10" onClick={handleCancelRide}>
+                إلغاء الطلب
+              </Button>
+            </div>
+          </div>
         )
       }
 
@@ -825,6 +860,35 @@ const CustomerDashboard = () => {
         )
       }
 
+
+      {/* --- Radar Animation Layer --- */}
+      {
+        isSearchingDriver && (
+          <div className="absolute inset-0 z-[2000] bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm animate-in fade-in">
+            <div className="relative flex items-center justify-center w-64 h-64">
+              <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
+                <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
+              </div>
+              <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
+              <div className="absolute inset-4 rounded-full border border-[#84cc16] animate-ping opacity-20 delay-150"></div>
+              <div className="absolute inset-8 rounded-full border border-[#84cc16] animate-ping opacity-20 delay-300"></div>
+            </div>
+
+            <div className="space-y-4 text-center z-10 mt-8">
+              <h2 className="text-3xl font-bold text-white tracking-tight">جاري البحث عن كابتن...</h2>
+              <p className="text-gray-400 text-sm">نقوم بالبحث عن أقرب سائق متاح لك</p>
+
+              <Button
+                variant="outline"
+                className="mt-6 border-white/20 text-white hover:bg-white/10 px-8 py-6 rounded-full"
+                onClick={() => setIsSearchingDriver(false)}
+              >
+                إلغاء البحث
+              </Button>
+            </div>
+          </div>
+        )
+      }
 
       {/* --- Active Ride (Accepted/In Progress) --- */}
       {
