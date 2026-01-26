@@ -145,7 +145,7 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
   }, [recenterKey, handleRecenter]);
 
   return (
-    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "200px", marginRight: "16px", pointerEvents: "auto", zIndex: 1000 }}>
+    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "350px", marginRight: "16px", pointerEvents: "auto", zIndex: 4000 }}>
       <button
         onClick={(e) => { e.stopPropagation(); handleRecenter(); }}
         className={cn("w-12 h-12 rounded-xl border border-[#84cc16] shadow-xl flex items-center justify-center transition-all duration-300 active:scale-95", isLocked ? "bg-[#84cc16] text-black" : "bg-[#1A1A1A] text-[#84cc16]")}
@@ -182,7 +182,8 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
 
   // Memoize markers to prevent prop drilling re-renders
   const memoMarkers = useMemo(() => markers, [JSON.stringify(markers)]);
-  const displayRoute = enhancedRoute || (route?.length && route.length > 2 ? route : null);
+  // FIX: Allow route of length 2 (Straight line) as fallback if enhancedRoute fails
+  const displayRoute = enhancedRoute || (route?.length && route.length >= 2 ? route : null);
   const memoRoute = useMemo(() => displayRoute, [JSON.stringify(displayRoute)]);
 
   if (!center) return null;
@@ -213,5 +214,19 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
     </div>
   );
 };
+
+// ... existing code ...
+
+// Update MapController Style
+function MapControllerWrapper({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
+  // ...
+}
+// Actually, I'll just edit the MapController return directly below since I am in replacing block.
+// Wait, I can't reach MapController from here easily in one block if it's far up.
+// I will target the MapController return specifically in a separate step if needed, or if it is close.
+// Looking at file content, MapController is above Main Component. 
+// I will do the route fix here, then the button fix in next step to be safe, OR I can try to find where MapController return is.
+// It seems `MapController` is lines 93-157.
+
 
 export default Map;
