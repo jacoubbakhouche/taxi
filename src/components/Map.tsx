@@ -34,15 +34,12 @@ interface MapProps {
 }
 
 // === MEMOIZED MARKERS ===
-// Prevents re-rendering markers on every map move/GPS update unless data explicitly changes
 const MapMarkers = memo(({ markers }: { markers: MapProps['markers'] }) => {
   if (!markers?.length) return null;
   return (
     <>
       {markers.map((marker, i) => {
-        // Create stable key based on position to avoid index-based flicker
         const key = `${marker.position[0]}-${marker.position[1]}-${marker.icon}`;
-
         let iconHtml = "";
         let anchor: [number, number] = [20, 20];
 
@@ -75,7 +72,6 @@ const MapMarkers = memo(({ markers }: { markers: MapProps['markers'] }) => {
     </>
   )
 }, (prev, next) => {
-  // Custom comparison for performance
   return JSON.stringify(prev.markers) === JSON.stringify(next.markers);
 });
 
@@ -83,11 +79,20 @@ const MapMarkers = memo(({ markers }: { markers: MapProps['markers'] }) => {
 const MapPolyline = memo(({ positions }: { positions: [number, number][] }) => {
   return <Polyline positions={positions} pathOptions={{ color: "#22c55e", weight: 6, opacity: 0.9 }} />
 }, (prev, next) => {
-  // Only re-render if route points change length or endpoints
+  // Basic check first/last pt
   if (prev.positions.length !== next.positions.length) return false;
-  // Check first and last point usually enough for stability
   return prev.positions[0] === next.positions[0] && prev.positions[prev.positions.length - 1] === next.positions[next.positions.length - 1];
 });
+
+// ===CLICK HANDLER (Restored)===
+function MapClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onClick && onClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
 
 // === MAP CONTROLLER ===
 function MapController({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
@@ -145,12 +150,18 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
   }, [recenterKey, handleRecenter]);
 
   return (
-    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "350px", marginRight: "16px", pointerEvents: "auto", zIndex: 4000 }}>
+    <div
+      className={cn(
+        "leaflet-bottom leaflet-right transition-opacity duration-300",
+        isLocked ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"
+      )}
+      style={{ marginBottom: "350px", marginRight: "16px", zIndex: 4000 }}
+    >
       <button
         onClick={(e) => { e.stopPropagation(); handleRecenter(); }}
-        className={cn("w-12 h-12 rounded-xl border border-[#84cc16] shadow-xl flex items-center justify-center transition-all duration-300 active:scale-95", isLocked ? "bg-[#84cc16] text-black" : "bg-[#1A1A1A] text-[#84cc16]")}
+        className="w-12 h-12 rounded-full border border-[#84cc16] shadow-[0_5px_15px_rgba(0,0,0,0.5)] bg-[#1A1A1A] text-[#84cc16] flex items-center justify-center transition-all duration-300 active:scale-95 hover:bg-[#84cc16] hover:text-black"
       >
-        <Navigation className={cn("w-5 h-5 transition-transform duration-300", isLocked ? "fill-current rotate-45" : "fill-transparent")} />
+        <Navigation className="w-5 h-5 fill-current" />
       </button>
     </div>
   );
@@ -170,7 +181,7 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
 
   useEffect(() => {
     if (route?.length === 2 && route[0] && route[1]) {
-      if (route[0][0] !== 0 && route[1][0] !== 0) { // Check valid coords
+      if (route[0][0] !== 0 && route[1][0] !== 0) {
         getRoadRoute(route[0], route[1]).then(path => {
           if (path) setEnhancedRoute(path);
         });
@@ -180,9 +191,8 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
     }
   }, [route?.[0]?.[0], route?.[1]?.[0]]);
 
-  // Memoize markers to prevent prop drilling re-renders
   const memoMarkers = useMemo(() => markers, [JSON.stringify(markers)]);
-  // FIX: Allow route of length 2 (Straight line) as fallback if enhancedRoute fails
+  // Fallback to straight line if API fails or while loading
   const displayRoute = enhancedRoute || (route?.length && route.length >= 2 ? route : null);
   const memoRoute = useMemo(() => displayRoute, [JSON.stringify(displayRoute)]);
 
@@ -204,29 +214,12 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
         />
 
         <MapController center={center} recenterKey={recenterKey} />
-
-        {onMapClick && <div style={{ display: 'none' }}>{/* Use hook for click */}</div>}
-
+        {onMapClick && <MapClickHandler onClick={onMapClick} />}
         <MapMarkers markers={memoMarkers} />
         {memoRoute && <MapPolyline positions={memoRoute} />}
-
       </MapContainer>
     </div>
   );
 };
-
-// ... existing code ...
-
-// Update MapController Style
-function MapControllerWrapper({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
-  // ...
-}
-// Actually, I'll just edit the MapController return directly below since I am in replacing block.
-// Wait, I can't reach MapController from here easily in one block if it's far up.
-// I will target the MapController return specifically in a separate step if needed, or if it is close.
-// Looking at file content, MapController is above Main Component. 
-// I will do the route fix here, then the button fix in next step to be safe, OR I can try to find where MapController return is.
-// It seems `MapController` is lines 93-157.
-
 
 export default Map;
