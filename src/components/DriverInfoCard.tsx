@@ -122,26 +122,25 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
           </div>
 
           {/* 3. Action (Cancel) */}
-          <div
-            className="flex flex-col items-center gap-2 cursor-pointer flex-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (rideStatus === 'in_progress') onEndRide?.();
-              else onCancel?.();
-            }}
-          >
-            <div className={cn(
-              "w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg active:scale-95 transition-all",
-              rideStatus === 'in_progress'
-                ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500/30"
-                : "bg-gray-800 text-gray-400 border border-white/10 hover:bg-gray-700"
-            )}>
-              {rideStatus === 'in_progress' ? <CheckSquare className="w-6 h-6" /> : <X className="w-6 h-6" />}
+          {/* 3. Action (Cancel) - Only visible if ride is NOT yet in progress */}
+          {rideStatus !== 'in_progress' ? (
+            <div
+              className="flex flex-col items-center gap-2 cursor-pointer flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel?.();
+              }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg active:scale-95 transition-all bg-gray-800 text-gray-400 border border-white/10 hover:bg-gray-700">
+                <X className="w-6 h-6" />
+              </div>
+              <span className="text-xs text-gray-400 font-medium">إلغاء</span>
             </div>
-            <span className="text-xs text-gray-400 font-medium">
-              {rideStatus === 'in_progress' ? "إنهاء" : "إلغاء"}
-            </span>
-          </div>
+          ) : (
+            // Empty placeholder to keep layout balanced/spaced if needed, or nothing.
+            // Let's us nothing so Call/Profile center better or take space.
+            <div className="flex-1"></div>
+          )}
         </div>
 
         {/* Note Input Placeholder */}
