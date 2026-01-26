@@ -1156,8 +1156,6 @@ const DriverDashboard = () => {
           driverLocation={driverLocation}
           onCompleteRide={handleCompleteRide}
           onCallCustomer={() => window.location.href = `tel:${customerInfo?.phone}`}
-          isExpanded={isSheetExpanded}
-          onToggleExpand={() => setIsSheetExpanded(!isSheetExpanded)}
         />
       )}
 

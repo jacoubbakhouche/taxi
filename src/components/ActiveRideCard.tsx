@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone, CheckCircle, Navigation, User } from "lucide-react";
+import { Phone, CheckCircle, Navigation, User, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, PanInfo, AnimatePresence, useDragControls } from "framer-motion";
 
 interface ActiveRideCardProps {
     currentRide: any;
@@ -9,8 +10,7 @@ interface ActiveRideCardProps {
     driverLocation: [number, number] | null;
     onCompleteRide: () => void;
     onCallCustomer: () => void;
-    isExpanded: boolean;
-    onToggleExpand: () => void;
+    // Previously passed props are removed to enforce internal state
 }
 
 const ActiveRideCard = ({
@@ -19,9 +19,10 @@ const ActiveRideCard = ({
     driverLocation,
     onCompleteRide,
     onCallCustomer,
-    isExpanded,
-    onToggleExpand,
 }: ActiveRideCardProps) => {
+    // STATE: Default to COLLAPSED (false) to minimize obstruction initially?
+    // User requested "It comes down and I pull it up".
+    const [expanded, setExpanded] = useState(false);
 
     // Logic to calculate progress, distance, etc.
     let targetLat = 0, targetLng = 0;
@@ -66,111 +67,178 @@ const ActiveRideCard = ({
         }
     }
 
+    // --- DRAG LOGIC ---
+    const handleDragEndExpanded = (_: any, info: PanInfo) => {
+        // Drag Down (> 50px) to Collapse
+        if (info.offset.y > 50) {
+            setExpanded(false);
+        }
+    };
+
+    const handleDragEndCollapsed = (_: any, info: PanInfo) => {
+        // Drag Up (< -50px) to Expand
+        if (info.offset.y < -50) {
+            setExpanded(true);
+        }
+    };
+
     return (
-        <div
-            className={cn(
-                "fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 flex flex-col transition-all duration-300 ease-in-out",
-                isExpanded ? "h-[75vh]" : "h-[160px]" // Strict height classes
-            )}
-        >
-            {/* Handle Bar Area - Click to Toggle */}
-            <div
-                className="w-full flex items-center justify-center pt-4 pb-2 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
-                onClick={onToggleExpand}
-            >
-                <div className="h-1.5 w-12 bg-gray-600 rounded-full"></div>
-            </div>
+        <>
+            {/* === COLLAPSED STATE (Floating Pill) === */
+                /* Visible when !expanded */
+            }
+            <AnimatePresence>
+                {!expanded && (
+                    <motion.div
+                        initial={{ y: 200, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 200, opacity: 0 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        drag="y"
+                        dragConstraints={{ top: 0, bottom: 0 }}
+                        dragElastic={0.1}
+                        onDragEnd={handleDragEndCollapsed}
+                        className="fixed bottom-0 left-0 right-0 z-[3000] px-4 pb-6"
+                        onClick={() => setExpanded(true)}
+                    >
+                        <div className="bg-[#1A1A1A] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-3xl p-4 cursor-pointer relative overflow-hidden">
+                            {/* Handle */}
+                            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-600/50 rounded-full" />
 
-            <div className="px-6 flex flex-col h-full">
+                            <div className="flex items-center justify-between mt-2">
+                                <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                                        currentRide.status === 'in_progress' ? "bg-blue-500/20 text-blue-500" : "bg-lime-500/20 text-lime-500"
+                                    )}>
+                                        <Navigation className="w-5 h-5 fill-current" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-base font-bold text-white leading-tight">
+                                            {currentRide.status === 'in_progress' ? "Heading to Destination" : "Pickup Customer"}
+                                        </h2>
+                                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                                            <span className="text-white font-bold">{timeMin} min</span>
+                                            <span>•</span>
+                                            <span>{distKm.toFixed(1)} km</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                {/* === HEADER SECTION (Always Visible) === */}
-                <div className="shrink-0 mb-4 cursor-pointer" onClick={onToggleExpand}>
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className={cn(
-                                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-lime-500 text-black"
-                                )}>
-                                    {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
-                                </span>
+                                {/* Chevron to indicate "Pull Up" */}
+                                <div className="text-gray-500">
+                                    <ChevronUp className="w-6 h-6 animate-pulse" />
+                                </div>
                             </div>
-                            <h2 className="text-xl font-bold text-white leading-tight">
-                                {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
-                            </h2>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-2xl font-bold text-white">{distKm.toFixed(1)} <span className="text-xs text-gray-500">km</span></div>
-                            <div className="text-xs text-gray-400 font-medium">{timeMin} min remaining</div>
-                        </div>
-                    </div>
 
-                    {/* Progress Bar */}
-                    <div className="relative h-2 bg-gray-800 rounded-full">
-                        <div
-                            className="absolute top-0 left-0 bottom-0 bg-[#84cc16] rounded-full shadow-[0_0_10px_#84cc16] transition-all duration-1000"
-                            style={{ width: `${progressPercent}%` }}
-                        ></div>
-                        <div
-                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16] transition-all duration-1000"
-                            style={{ left: `${progressPercent}%` }}
-                        >
-                            <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* === EXPANDED CONTENT === */}
-                {/* Strictly hidden when collapsed to prevent ANY overlay */}
-                <div className={cn(
-                    "flex-1 overflow-y-auto space-y-6 pt-4 pb-12 transition-opacity duration-300 delay-100",
-                    isExpanded ? "opacity-100 block" : "opacity-0 hidden"
-                )}>
-
-                    {/* Customer Info */}
-                    <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <div className="w-14 h-14 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center">
-                            {customerInfo?.profile_image ? (
-                                <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
-                            ) : (
-                                <User className="w-6 h-6 text-gray-400" />
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-white text-lg truncate">{customerInfo?.full_name || "Customer"}</h3>
-                            <div className="flex items-center gap-1 text-sm text-lime-500">
-                                <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} <span className="text-gray-500">({customerInfo?.total_rides || 0} rides)</span>
+                            {/* Progress Line */}
+                            <div className="mt-4 h-1 bg-gray-800 rounded-full overflow-hidden w-full">
+                                <div className="h-full bg-current text-[#84cc16]" style={{ width: `${progressPercent}%`, backgroundColor: 'currentColor' }} />
                             </div>
                         </div>
-                        <div className="text-right shrink-0">
-                            <p className="text-2xl font-bold text-white">{currentRide.final_price || currentRide.price} <span className="text-sm">DA</span></p>
-                            <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">CASH</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+            {/* === EXPANDED STATE (Full Drawer) === */
+                /* Visible when expanded */
+            }
+            <AnimatePresence>
+                {expanded && (
+                    <motion.div
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                        drag="y"
+                        dragConstraints={{ top: 0, bottom: 0 }}
+                        dragElastic={0.1} // Allow some stretch
+                        onDragEnd={handleDragEndExpanded}
+                        className="fixed bottom-0 left-0 right-0 z-[3001] bg-[#1A1A1A] h-[85vh] rounded-t-[2rem] shadow-2xl border-t border-white/10 flex flex-col"
+                    >
+                        {/* Header with Handle & Close */}
+                        <div
+                            className="pt-4 pb-2 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/5"
+                            onClick={() => setExpanded(false)}
+                        >
+                            <div className="w-12 h-1.5 bg-gray-600 rounded-full mb-3" />
                         </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="space-y-3">
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="w-full h-14 rounded-xl border-[#84cc16] text-[#84cc16] hover:bg-[#84cc16] hover:text-black font-bold text-lg"
-                            onClick={onCallCustomer}
-                        >
-                            <Phone className="mr-3 w-5 h-5" /> Call Customer
-                        </Button>
+                        <div className="px-6 flex-1 overflow-y-auto pb-8">
 
-                        <Button
-                            size="lg"
-                            className="w-full h-16 rounded-xl bg-[#84cc16] hover:bg-[#E5C838] text-black text-xl font-bold shadow-[0_0_20px_rgba(132,204,22,0.3)] transition-all active:scale-95"
-                            onClick={onCompleteRide}
-                        >
-                            <CheckCircle className="mr-3 w-6 h-6" /> COMPLETE RIDE
-                        </Button>
-                    </div>
-                </div>
+                            {/* Big Callout */}
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white mb-1">
+                                        {currentRide.status === 'in_progress' ? "Trip in Progress" : "On way to Pickup"}
+                                    </h2>
+                                    <p className="text-gray-400 text-sm">Follow route on map</p>
+                                </div>
+                                <div
+                                    className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/20"
+                                    onClick={() => setExpanded(false)}
+                                >
+                                    <ChevronDown className="text-white w-6 h-6" />
+                                </div>
+                            </div>
 
-            </div>
-        </div>
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className="bg-green-500/10 rounded-2xl p-4 text-center border border-green-500/20">
+                                    <p className="text-green-500 text-xs uppercase font-bold mb-1">DISTANCE</p>
+                                    <p className="text-3xl font-bold text-white">{distKm.toFixed(1)} <span className="text-sm text-gray-400">km</span></p>
+                                </div>
+                                <div className="bg-blue-500/10 rounded-2xl p-4 text-center border border-blue-500/20">
+                                    <p className="text-blue-500 text-xs uppercase font-bold mb-1">ESTIMATED TIME</p>
+                                    <p className="text-3xl font-bold text-white">{timeMin} <span className="text-sm text-gray-400">min</span></p>
+                                </div>
+                            </div>
+
+                            {/* Customer Card */}
+                            <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-6 flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-gray-700 overflow-hidden flex items-center justify-center shrink-0 border-2 border-white/10 shadow-lg">
+                                    {customerInfo?.profile_image ? (
+                                        <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
+                                    ) : <User className="text-gray-400 w-8 h-8" />}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
+                                    <p className="text-sm text-lime-500 flex items-center gap-1">
+                                        ★ {customerInfo?.rating?.toFixed(1) || 5.0}
+                                        <span className="text-gray-500">({customerInfo?.total_rides || 0} rides)</span>
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-bold text-white">{currentRide.price} DA</p>
+                                    <span className="bg-white/10 text-white text-[10px] px-2 py-1 rounded uppercase font-bold">Cash</span>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-4">
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="w-full h-14 rounded-xl border-gray-600 text-gray-300 hover:text-white hover:bg-white/10 font-medium text-lg"
+                                    onClick={onCallCustomer}
+                                >
+                                    <Phone className="mr-3 w-5 h-5" /> Call Customer
+                                </Button>
+
+                                <Button
+                                    size="lg"
+                                    className="w-full h-16 rounded-xl bg-[#84cc16] hover:bg-[#72b01d] text-black text-xl font-bold shadow-xl shadow-lime-500/20"
+                                    onClick={onCompleteRide}
+                                >
+                                    <CheckCircle className="mr-3 w-6 h-6" /> COMPLETE RIDE
+                                </Button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
     );
 };
 
