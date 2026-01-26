@@ -34,8 +34,7 @@ const App = () => {
         <Toaster />
         <Sonner />
 
-        {/* Splash Screen Overlay */}
-        {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+
 
         <BrowserRouter>
           <Routes>

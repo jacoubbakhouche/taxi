@@ -659,186 +659,185 @@ const CustomerDashboard = () => {
             </div>
           </SheetContent>
         </Sheet>
-    </div>
-      </header >
+      </header>
 
-  {/* --- Map Layer --- */ }
-  < div className = "absolute inset-0 z-0" >
-    <Map
-      center={userLocation || [36.75, 3.05]}
-      markers={getMarkers()}
-      route={route}
-      onMapClick={handleMapClick}
-    />
+      {/* --- Map Layer --- */}
+      < div className="absolute inset-0 z-0" >
+        <Map
+          center={userLocation || [36.75, 3.05]}
+          markers={getMarkers()}
+          route={route}
+          onMapClick={handleMapClick}
+        />
       </div >
 
-  { candidateDriver && !currentRideId && (
-    <div className="absolute font-sans bottom-0 left-0 right-0 p-4 bg-[#111] border-t border-white/10 rounded-t-3xl animate-in slide-in-from-bottom-10 z-[3000]">
-      <div className="flex items-center gap-4 mb-4">
-        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-green-500">
-          {candidateDriver.profile_image ? (
-            <img src={candidateDriver.profile_image} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold text-lg">
-              {candidateDriver.full_name?.[0]}
+      {candidateDriver && !currentRideId && (
+        <div className="absolute font-sans bottom-0 left-0 right-0 p-4 bg-[#111] border-t border-white/10 rounded-t-3xl animate-in slide-in-from-bottom-10 z-[3000]">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-green-500">
+              {candidateDriver.profile_image ? (
+                <img src={candidateDriver.profile_image} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white font-bold text-lg">
+                  {candidateDriver.full_name?.[0]}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div>
-          <h3 className="text-white font-bold text-lg">{candidateDriver.full_name}</h3>
-          <div className="flex items-center gap-3 mt-1">
-            <div className="flex items-center gap-1 bg-[#84cc16]/10 px-2 py-0.5 rounded-full">
-              <span className="text-[#84cc16] text-xs font-bold">★ {candidateDriver.rating?.toFixed(1) || 5.0}</span>
-            </div>
-            <div className="text-gray-400 text-xs flex items-center gap-1">
-              <span className="font-mono text-white/50">|</span>
-              <span>{candidateDriver.total_rides || 0} رحلة</span>
-              <span className="font-mono text-white/50">|</span>
-              <span>{candidateDriver.car_model || "Taxi"}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        {/* REJECT BUTTON - The logic fix */}
-        <Button
-          className="flex-1 bg-gray-800 hover:bg-gray-700 text-white h-12 rounded-xl font-bold border border-white/10"
-          onClick={() => {
-            // 1. Calculate new list IMMEDIATELY
-            const newList = [...rejectedDriverIds, candidateDriver.id];
-            // 2. Update UI State (for future)
-            setRejectedDriverIds(newList);
-            // 3. Search AGAIN using the NEW list directly (Bypassing state delay)
-            findNearestDriver(newList);
-          }}
-        >
-          رفض
-        </Button>
-
-        <Button
-          className="flex-[2] bg-[#84cc16] hover:bg-[#65a30d] text-black h-12 rounded-xl font-bold"
-          onClick={handleRequestRide}
-        >
-          قبول
-        </Button>
-      </div>
-    </div>
-  )}
-
-{/* ... old bottom sheet ... */ }
-{
-  rideStatus === 'idle' && !candidateDriver && (
-    <div className="fixed bottom-0 left-0 right-0 z-[1000] p-6 pb-8 bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] border-t border-white/5 transition-all duration-300 animate-in slide-in-from-bottom-10">
-      {/* Handle Bar */}
-      <div className="w-full flex justify-center pb-5">
-        <div className="w-12 h-1.5 bg-gray-700 rounded-full opacity-50"></div>
-      </div>
-
-      {!destination ? (
-        <div className="flex gap-3">
-          <Input
-            placeholder="أين تريد الذهاب؟"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="text-right bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl h-12"
-            dir="rtl"
-          />
-          <Button size="icon" className="h-12 w-12 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90" onClick={handleSearch}>
-            <Search className="w-5 h-5" />
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center text-right" dir="rtl">
             <div>
-              <h3 className="font-bold text-3xl mb-1">{Math.round(price)} دج</h3>
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <span className="bg-white/10 px-2 py-0.5 rounded textxs">CASH</span>
-                <span>{distance.toFixed(1)} km • {duration.toFixed(0)} min</span>
+              <h3 className="text-white font-bold text-lg">{candidateDriver.full_name}</h3>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1 bg-[#84cc16]/10 px-2 py-0.5 rounded-full">
+                  <span className="text-[#84cc16] text-xs font-bold">★ {candidateDriver.rating?.toFixed(1) || 5.0}</span>
+                </div>
+                <div className="text-gray-400 text-xs flex items-center gap-1">
+                  <span className="font-mono text-white/50">|</span>
+                  <span>{candidateDriver.total_rides || 0} رحلة</span>
+                  <span className="font-mono text-white/50">|</span>
+                  <span>{candidateDriver.car_model || "Taxi"}</span>
+                </div>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
-              تغيير الوجهة
+          </div>
+
+          <div className="flex gap-2">
+            {/* REJECT BUTTON - The logic fix */}
+            <Button
+              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white h-12 rounded-xl font-bold border border-white/10"
+              onClick={() => {
+                // 1. Calculate new list IMMEDIATELY
+                const newList = [...rejectedDriverIds, candidateDriver.id];
+                // 2. Update UI State (for future)
+                setRejectedDriverIds(newList);
+                // 3. Search AGAIN using the NEW list directly (Bypassing state delay)
+                findNearestDriver(newList);
+              }}
+            >
+              رفض
+            </Button>
+
+            <Button
+              className="flex-[2] bg-[#84cc16] hover:bg-[#65a30d] text-black h-12 rounded-xl font-bold"
+              onClick={handleRequestRide}
+            >
+              قبول
             </Button>
           </div>
-
-          <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5">
-            <div className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-white/10">
-              <MapPin className="text-[#84cc16]" />
-            </div>
-            <div className="text-right flex-1">
-              <p className="text-xs text-gray-500">الوجهة</p>
-              <p className="font-bold text-sm truncate">{searchQuery}</p>
-            </div>
-          </div>
-
-          <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-[#84cc16]/10" onClick={handleRequestRide}>
-            {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : "بحث عن سائق 🚖"}
-          </Button>
         </div>
       )}
-    </div>
-  )
-}
 
-{/* --- Candidate Driver Popup --- */ }
+      {/* ... old bottom sheet ... */}
+      {
+        rideStatus === 'idle' && !candidateDriver && (
+          <div className="fixed bottom-0 left-0 right-0 z-[1000] p-6 pb-8 bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] border-t border-white/5 transition-all duration-300 animate-in slide-in-from-bottom-10">
+            {/* Handle Bar */}
+            <div className="w-full flex justify-center pb-5">
+              <div className="w-12 h-1.5 bg-gray-700 rounded-full opacity-50"></div>
+            </div>
+
+            {!destination ? (
+              <div className="flex gap-3">
+                <Input
+                  placeholder="أين تريد الذهاب؟"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="text-right bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl h-12"
+                  dir="rtl"
+                />
+                <Button size="icon" className="h-12 w-12 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90" onClick={handleSearch}>
+                  <Search className="w-5 h-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center text-right" dir="rtl">
+                  <div>
+                    <h3 className="font-bold text-3xl mb-1">{Math.round(price)} دج</h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <span className="bg-white/10 px-2 py-0.5 rounded textxs">CASH</span>
+                      <span>{distance.toFixed(1)} km • {duration.toFixed(0)} min</span>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
+                    تغيير الوجهة
+                  </Button>
+                </div>
+
+                <div className="bg-white/5 p-4 rounded-2xl flex items-center gap-3 border border-white/5">
+                  <div className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center border border-white/10">
+                    <MapPin className="text-[#84cc16]" />
+                  </div>
+                  <div className="text-right flex-1">
+                    <p className="text-xs text-gray-500">الوجهة</p>
+                    <p className="font-bold text-sm truncate">{searchQuery}</p>
+                  </div>
+                </div>
+
+                <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-[#84cc16]/10" onClick={handleRequestRide}>
+                  {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : "بحث عن سائق 🚖"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      {/* --- Candidate Driver Popup --- */}
 
 
-{/* --- Pending State --- */ }
-{/* --- Pending State (Radar Effect) --- */ }
-{
-  rideStatus === 'pending' && (
-    <div className="absolute inset-0 z-[2000] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-10 animate-in fade-in duration-500">
+      {/* --- Pending State --- */}
+      {/* --- Pending State (Radar Effect) --- */}
+      {
+        rideStatus === 'pending' && (
+          <div className="absolute inset-0 z-[2000] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-10 animate-in fade-in duration-500">
 
-      {/* Radar Animation */}
-      <div className="relative flex items-center justify-center">
-        {/* Pulsing Circles */}
-        <div className="absolute w-64 h-64 bg-[#84cc16]/20 rounded-full animate-ping opacity-20 duration-[3s]"></div>
-        <div className="absolute w-48 h-48 bg-[#84cc16]/10 rounded-full animate-pulse delay-700"></div>
-        <div className="absolute w-32 h-32 border border-[#84cc16]/30 rounded-full"></div>
+            {/* Radar Animation */}
+            <div className="relative flex items-center justify-center">
+              {/* Pulsing Circles */}
+              <div className="absolute w-64 h-64 bg-[#84cc16]/20 rounded-full animate-ping opacity-20 duration-[3s]"></div>
+              <div className="absolute w-48 h-48 bg-[#84cc16]/10 rounded-full animate-pulse delay-700"></div>
+              <div className="absolute w-32 h-32 border border-[#84cc16]/30 rounded-full"></div>
 
-        {/* Center Icon */}
-        <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
-          <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
-          <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
-        </div>
-      </div>
+              {/* Center Icon */}
+              <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
+                <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
+                <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
+              </div>
+            </div>
 
-      <div className="space-y-2 z-10">
-        <h2 className="text-3xl font-bold text-white tracking-tight">جاري البحث عن كابتن...</h2>
-        <p className="text-gray-400 text-sm">يتم الآن إبلاغ السائقين القريبين بطلبك</p>
-      </div>
+            <div className="space-y-2 z-10">
+              <h2 className="text-3xl font-bold text-white tracking-tight">جاري البحث عن كابتن...</h2>
+              <p className="text-gray-400 text-sm">يتم الآن إبلاغ السائقين القريبين بطلبك</p>
+            </div>
 
-      <div className="z-10 w-full max-w-xs px-6">
-        <Button
-          variant="destructive"
-          onClick={handleCancelRide}
-          className="w-full h-14 text-lg rounded-2xl shadow-lg border border-red-500/20 hover:bg-red-600/90 transition-all font-bold"
-        >
-          إلغاء الطلب
-        </Button>
-        <p className="mt-4 text-xs text-center text-gray-500">
-          سيتم نقلك تلقائياً عند قبول الطلب
-        </p>
-      </div>
-    </div>
-  )
-}
+            <div className="z-10 w-full max-w-xs px-6">
+              <Button
+                variant="destructive"
+                onClick={handleCancelRide}
+                className="w-full h-14 text-lg rounded-2xl shadow-lg border border-red-500/20 hover:bg-red-600/90 transition-all font-bold"
+              >
+                إلغاء الطلب
+              </Button>
+              <p className="mt-4 text-xs text-center text-gray-500">
+                سيتم نقلك تلقائياً عند قبول الطلب
+              </p>
+            </div>
+          </div>
+        )
+      }
 
-{/* --- Active Ride (Accepted/In Progress) --- */ }
-{
-  (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
-    <DriverInfoCard
-      driver={driverInfo}
-      rideStatus={rideStatus}
-      onCancel={handleCancelRide}
-      onEndRide={handleEndRide}
-    />
-  )
-}
+      {/* --- Active Ride (Accepted/In Progress) --- */}
+      {
+        (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
+          <DriverInfoCard
+            driver={driverInfo}
+            rideStatus={rideStatus}
+            onCancel={handleCancelRide}
+            onEndRide={handleEndRide}
+          />
+        )
+      }
 
-{/* --- Rating Dialog --- */ }
+      {/* --- Rating Dialog --- */}
       <RatingDialog
         open={showRating}
         onOpenChange={setShowRating}
