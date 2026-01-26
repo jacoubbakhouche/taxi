@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import DriverInfoCard from "@/components/DriverInfoCard";
 import RatingDialog from "@/components/RatingDialog";
+import CompleteProfileDialog from "@/components/CompleteProfileDialog";
 import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 /**
@@ -51,9 +52,8 @@ const CustomerDashboard = () => {
   // --- UI State ---
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [showRating, setShowRating] = useState(false);
-
-  // State to track rejected drivers for the current search session
   const [rejectedDriverIds, setRejectedDriverIds] = useState<string[]>([]);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
 
   // ===========================================
   // 1. Initialization & Restoration
@@ -70,10 +70,11 @@ const CustomerDashboard = () => {
           return;
         }
 
-        // 2. Get User DB ID
+        // 2. Get User DB ID & Profile
+        // Fetch full fields to check completeness
         const { data: user } = await supabase
           .from('users')
-          .select('id')
+          .select('*')
           .eq('auth_id', session.user.id)
           .single();
 
@@ -81,6 +82,11 @@ const CustomerDashboard = () => {
           throw new Error("User record not found");
         }
         setUserId(user.id);
+
+        // Check for missing info
+        if (!user.phone || !user.full_name) {
+          setShowCompleteProfile(true);
+        }
 
         // 3. Get Location (Revised: Watch Position for accuracy)
         if (navigator.geolocation) {
@@ -91,18 +97,7 @@ const CustomerDashboard = () => {
             (err) => console.error("Location error:", err),
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Force fresh
           );
-
-          // Also set up a watcher to keep it updated if they move before booking
-          const watchId = navigator.geolocation.watchPosition(
-            (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-            (err) => console.error("Watch error:", err),
-            { enableHighAccuracy: true }
-          );
-
-          // Cleanup watcher on unmount (we need a ref for this in the main body really, 
-          // but since this is inside initialize(), we'll attach it to the window or ref if possible.
-          // For now, let's just use the ref approach in a separate useEffect strictly for location)
-          // actually, let's move this out of initialize() to a dedicated useEffect
+          // Removed duplicate watcher init here, handled in active effect below
         }
 
         // 4. Restore Active Ride (CRITICAL FIX)
@@ -805,6 +800,11 @@ const CustomerDashboard = () => {
         onSubmit={handleRatingSubmit}
         name={driverInfo?.full_name || "السائق"}
         role="driver"
+      />
+      <CompleteProfileDialog
+        open={showCompleteProfile}
+        userId={userId || ""}
+        onComplete={() => setShowCompleteProfile(false)}
       />
     </div>
   );
