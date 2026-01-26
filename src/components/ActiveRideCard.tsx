@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, CheckCircle, Navigation, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, PanInfo, AnimatePresence } from "framer-motion";
 
 interface ActiveRideCardProps {
     currentRide: any;
@@ -66,16 +67,37 @@ const ActiveRideCard = ({
         }
     }
 
+    // Restore Drag Logic as requested by USER
+    const handleDragEnd = (_: any, info: PanInfo) => {
+        // If dragged DOWN (positive Y) > threshold, Collapse
+        if (info.offset.y > 50 && isExpanded) {
+            onToggleExpand();
+        }
+        // If dragged UP (negative Y) > threshold, Expand
+        else if (info.offset.y < -50 && !isExpanded) {
+            onToggleExpand();
+        }
+    };
+
     return (
-        <div
-            className={cn(
-                "fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                isExpanded ? "h-[85vh] sm:h-[600px]" : "h-[180px]" // Explicit height control
-            )}
+        <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }} // Snap back after drag
+            dragElastic={0.05} // Stiffer resistance
+            onDragEnd={handleDragEnd}
+            initial={false}
+            animate={isExpanded ? "expanded" : "collapsed"}
+            variants={{
+                collapsed: { height: 180 }, // Small condensed state
+                expanded: { height: "75vh" } // Tall detailed state
+            }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 flex flex-col overflow-hidden"
+            style={{ touchAction: "none" }} // Important for mobile drag
         >
-            {/* Handle Bar Area - Click to Toggle */}
+            {/* Handle Bar Area - Interactable for Drag */}
             <div
-                className="w-full flex items-center justify-center pt-4 pb-2 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="w-full flex items-center justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors"
                 onClick={onToggleExpand}
             >
                 <div className="h-1.5 w-12 bg-gray-600 rounded-full"></div>
@@ -120,11 +142,16 @@ const ActiveRideCard = ({
                     </div>
                 </div>
 
-                {/* === EXPANDED CONTENT (Scrollable if needed) === */}
-                <div className={cn(
-                    "flex-1 overflow-y-auto space-y-6 pt-4 pb-8 transition-opacity duration-300",
-                    isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
-                )}>
+                {/* === EXPANDED CONTENT === */}
+                {/* We animate opacity to hide content smoothly when collapsed */}
+                <motion.div
+                    className="flex-1 overflow-y-auto space-y-6 pt-4 pb-20"
+                    variants={{
+                        collapsed: { opacity: 0, pointerEvents: "none" },
+                        expanded: { opacity: 1, pointerEvents: "auto" }
+                    }}
+                    transition={{ duration: 0.2 }}
+                >
 
                     {/* Customer Info */}
                     <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
@@ -166,10 +193,10 @@ const ActiveRideCard = ({
                             <CheckCircle className="mr-3 w-6 h-6" /> COMPLETE RIDE
                         </Button>
                     </div>
-                </div>
+                </motion.div>
 
             </div>
-        </div>
+        </motion.div>
     );
 };
 
