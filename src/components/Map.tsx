@@ -1,12 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Car, MapPin, User, Navigation, Crosshair } from "lucide-react";
+import { MapPin, User, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Fix Leaflet default icon issue
+// --- Leaflet Icon Fix ---
 if (typeof window !== 'undefined') {
   const iconDefault = L.Icon.Default;
   if (iconDefault && iconDefault.prototype && (iconDefault.prototype as any)._getIconUrl) {
@@ -33,61 +33,92 @@ interface MapProps {
   recenterKey?: number;
 }
 
-// === SMART MAP CONTROLLER ===
-// Logic: "Don't fight the user". 
-// - If user drags/zooms, STOP auto-following.
-// - Only follow if `isAutoCenter` is true.
+// === CORE CONTROLLER ===
+// Uses Refs for synchronous, immediate blocking of updates to prevent "fighting".
 function MapController({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
   const map = useMap();
 
-  // 1. State: Auto-Center Active? (Default: true)
-  const [isAutoCenter, setIsAutoCenter] = useState(true);
-  const initializedRef = useRef(false);
+  // STATE: Controls the visual UI of the button (Green/White)
+  const [isLocked, setIsLocked] = useState(true);
 
-  // 2. Detect Manual Interaction to PAUSE auto-center
+  // REF: Synchronous lock for logic (prevents race conditions)
+  const isLockedRef = useRef(true);
+  const isInteractingRef = useRef(false);
+
+  // --- 1. IMMEDIATE INTERACTION BLOCKING ---
+  // We use standard DOM listeners on the map container for 'mousedown'/'touchstart' 
+  // to block updates BEFORE Leaflet even fires 'dragstart'.
+  useEffect(() => {
+    const container = map.getContainer();
+
+    const startInteraction = () => {
+      isInteractingRef.current = true;
+      // If user touches map, we unlock PERMANENTLY until they click Re-Center
+      if (isLockedRef.current) {
+        isLockedRef.current = false;
+        setIsLocked(false);
+      }
+    };
+
+    const endInteraction = () => {
+      isInteractingRef.current = false;
+    };
+
+    // Capture all touch/mouse starts
+    container.addEventListener('mousedown', startInteraction);
+    container.addEventListener('touchstart', startInteraction);
+
+    // We listen for end of Drag via Leaflet events below, but also global mouseup for safety
+    window.addEventListener('mouseup', endInteraction);
+    window.addEventListener('touchend', endInteraction);
+
+    return () => {
+      container.removeEventListener('mousedown', startInteraction);
+      container.removeEventListener('touchstart', startInteraction);
+      window.removeEventListener('mouseup', endInteraction);
+      window.removeEventListener('touchend', endInteraction);
+    };
+  }, [map]);
+
+  // --- 2. LEAFLET EVENT LISTENERS ---
   useMapEvents({
     dragstart: () => {
-      console.log("User dragging -> Pause AutoCenter");
-      setIsAutoCenter(false);
+      isInteractingRef.current = true;
+      isLockedRef.current = false;
+      setIsLocked(false);
     },
     zoomstart: () => {
-      console.log("User zooming -> Pause AutoCenter");
-      setIsAutoCenter(false);
-    }
+      isInteractingRef.current = true;
+      isLockedRef.current = false;
+      setIsLocked(false);
+    },
+    dragend: () => { isInteractingRef.current = false; },
+    zoomend: () => { isInteractingRef.current = false; }
   });
 
-  // 3. Auto-Update Logic (The "Subscriber")
+  // --- 3. SMART UPDATE LOOP ---
   useEffect(() => {
-    // Initial load setView
-    if (!initializedRef.current && center) {
-      map.setView(center, 16);
-      initializedRef.current = true;
-      return;
+    // Only fly if Locked AND Not Interacting
+    if (isLockedRef.current && !isInteractingRef.current && center) {
+      // Check distance to avoid micro-stutters? Leaflet flyTo handles small moves gracefully-ish.
+      // We force animation to keep it smooth.
+      map.flyTo(center, 16, { animate: true, duration: 1.5 });
     }
+  }, [center, map]); // Triggers whenever 'center' prop updates (GPS ping)
 
-    // Passive Update: Only if AutoCenter is ON
-    if (isAutoCenter && center) {
-      // Use current zoom level to respect user preference even while tracking
-      // But ensure it's not too crazy (e.g. if current zoom is too far out < 10, maybe we force 15?)
-      // For now, respect map.getZoom() as requested.
-      map.flyTo(center, map.getZoom(), { animate: true, duration: 1.5 });
-    }
-  }, [center, isAutoCenter, map]);
-
-  // 4. Force Recenter Trigger (e.g. from Parent)
-  useEffect(() => {
-    if (recenterKey) {
-      handleRecenter();
-    }
-  }, [recenterKey]);
-
-  // 5. Button Action: Restore Auto-Center
-  const handleRecenter = () => {
-    console.log("Restoring AutoCenter...");
-    setIsAutoCenter(true);
-    // Force snap to a good "Navigation View" (Zoom 16)
+  // --- 4. RE-CENTER ACTION ---
+  const handleRecenter = useCallback(() => {
+    isLockedRef.current = true;
+    setIsLocked(true);
+    isInteractingRef.current = false;
     map.flyTo(center, 16, { animate: true, duration: 1 });
-  };
+  }, [center, map]);
+
+  // Listen for forced recenter prop
+  useEffect(() => {
+    if (recenterKey) handleRecenter();
+  }, [recenterKey, handleRecenter]);
+
 
   return (
     <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "120px", marginRight: "16px", pointerEvents: "auto", zIndex: 1000 }}>
@@ -97,155 +128,122 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
           handleRecenter();
         }}
         className={cn(
-          "w-14 h-14 rounded-full border-2 shadow-[0_4px_25px_rgba(0,0,0,0.6)] flex items-center justify-center transition-all duration-300 group active:scale-95",
-          isAutoCenter
-            ? "bg-[#84cc16] border-[#84cc16] text-black" // LOCKED (Green)
-            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50" // UNLOCKED (White)
+          "w-14 h-14 rounded-full border-2 shadow-xl flex items-center justify-center transition-all duration-300 group active:scale-95",
+          isLocked
+            ? "bg-[#84cc16] border-[#84cc16] text-black" // LOCKED
+            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50" // UNLOCKED
         )}
-        title="Re-center Map"
       >
         <Navigation className={cn(
           "w-6 h-6 transition-transform duration-300",
-          isAutoCenter ? "fill-current rotate-45" : "fill-transparent"
+          isLocked ? "fill-current rotate-45" : "fill-transparent"
         )} />
       </button>
     </div>
   );
 }
 
+// --- HELPERS ---
 function RouteBoundsFitter({ route }: { route?: [number, number][] }) {
   const map = useMap();
   const hasFitted = useRef(false);
-  const prevRouteRef = useRef<string>("");
+  const prevRouteKey = useRef("");
 
   useEffect(() => {
-    // Only fit if route exists, has points, and changed significantly OR hasn't fitted yet
     if (route && route.length > 1) {
-      const routeStr = JSON.stringify(route[0]) + JSON.stringify(route[route.length - 1]);
-      if (routeStr !== prevRouteRef.current) {
+      // Create a simple key to detect route changes
+      const key = `${route[0][0]},${route[0][1]}-${route[route.length - 1][0]},${route[route.length - 1][1]}`;
+
+      if (key !== prevRouteKey.current) {
         const bounds = L.latLngBounds(route);
         if (bounds.isValid()) {
-          console.log("New Route Detected -> Fitting Bounds");
-          map.fitBounds(bounds, {
-            padding: [50, 50],
-            maxZoom: 16,
-            animate: true
-          });
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
           hasFitted.current = true;
-          prevRouteRef.current = routeStr;
+          prevRouteKey.current = key;
         }
       }
     }
   }, [route, map]);
-
   return null;
 }
 
 function MapClickHandler({ onClick }: { onClick?: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click: (e) => {
-      onClick && onClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
+  useMapEvents({ click: (e) => onClick?.(e.latlng.lat, e.latlng.lng) });
   return null;
 }
 
 function MapMarkers({ markers }: { markers: MapProps['markers'] }) {
-  if (!markers || markers.length === 0) return null;
-
+  if (!markers?.length) return null;
   return (
     <>
-      {markers.map((marker, index) => {
+      {markers.map((marker, i) => {
         let iconHtml = "";
-        const iconSize: [number, number] = [40, 40];
         let anchor: [number, number] = [20, 20];
 
         if (marker.icon === "🚗" || marker.icon === "car") {
           iconHtml = renderToStaticMarkup(
-            <div className="car-marker-container" style={{ transform: `rotate(${marker.rotation || 0}deg)`, transition: "transform 0.5s ease-in-out" }}>
-              <div style={{ fontSize: '32px', lineHeight: '1', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>🚖</div>
-            </div>
-          );
-        } else if (marker.icon === "🧍" || marker.icon === "user") {
-          iconHtml = renderToStaticMarkup(
-            <div className="relative flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-200">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse absolute -top-1 -right-1" />
-              <User className="w-4 h-4 text-black" />
+            <div style={{ transform: `rotate(${marker.rotation || 0}deg)`, transition: "transform 0.5s ease-in-out" }}>
+              <div style={{ fontSize: '32px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>🚖</div>
             </div>
           );
         } else if (marker.icon === "📍" || marker.icon === "pin") {
           iconHtml = renderToStaticMarkup(
             <div className="relative flex items-center justify-center">
               <MapPin className="w-10 h-10 text-[#84cc16] fill-black drop-shadow-lg" />
-              <div className="absolute bottom-0 w-3 h-1 bg-black/50 blur-[2px] rounded-full" />
             </div>
           );
           anchor = [20, 38];
         } else {
-          iconHtml = `<div style="font-size: 32px; text-align: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${marker.icon}</div>`;
+          // Default User or Custom
+          iconHtml = renderToStaticMarkup(
+            <div className="relative flex items-center justify-center w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-200">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse absolute -top-1 -right-1" />
+              <User className="w-4 h-4 text-black" />
+            </div>
+          );
         }
 
-        const customIcon = L.divIcon({
-          html: iconHtml,
-          className: 'bg-transparent border-none',
-          iconSize: iconSize,
-          iconAnchor: anchor,
-        });
-
-        return (
-          <Marker
-            key={`marker-${marker.position[0]}-${marker.position[1]}-${index}`}
-            position={marker.position}
-            icon={customIcon}
-          >
-            {marker.popup && <Popup className="custom-popup">{marker.popup}</Popup>}
-          </Marker>
-        );
+        return <Marker key={i} position={marker.position} icon={L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [40, 40], iconAnchor: anchor })} >
+          {marker.popup && <Popup>{marker.popup}</Popup>}
+        </Marker>
       })}
     </>
-  );
+  )
 }
 
-// Fetch OSRM Route
+// --- FETCH ROUTE ---
 async function getRoadRoute(start: [number, number], end: [number, number]) {
-  const startStr = `${start[1]},${start[0]}`;
-  const endStr = `${end[1]},${end[0]}`;
   try {
-    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${startStr};${endStr}?overview=full&geometries=geojson`);
-    const data = await response.json();
-    if (data.code !== 'Ok' || !data.routes || !data.routes.length) return null;
-    return data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]) as [number, number][];
-  } catch (error) {
-    return null;
-  }
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.routes?.[0]) {
+      return data.routes[0].geometry.coordinates.map((c: number[]) => [c[1], c[0]]) as [number, number][];
+    }
+  } catch (e) { console.error(e); }
+  return null;
 }
 
 const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }: MapProps) => {
   const [enhancedRoute, setEnhancedRoute] = useState<[number, number][] | null>(null);
 
-  const start = route && route.length === 2 ? route[0] : null;
-  const end = route && route.length === 2 ? route[1] : null;
-
   useEffect(() => {
-    if (start && end) {
-      getRoadRoute(start, end).then((path) => {
-        if (path) setEnhancedRoute(path);
-      });
+    if (route?.length === 2) {
+      getRoadRoute(route[0], route[1]).then(setEnhancedRoute);
     } else {
       setEnhancedRoute(null);
     }
-  }, [start?.[0], start?.[1], end?.[0], end?.[1]]);
+  }, [route?.[0]?.[0], route?.[1]?.[0]]); // Simple deep check
 
-  const displayRoute = enhancedRoute || ((route && route.length > 2) ? route : null);
+  const displayRoute = enhancedRoute || (route?.length && route.length > 2 ? route : null);
 
-  if (!center || isNaN(center[0]) || isNaN(center[1])) return null;
+  if (!center) return null;
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg relative">
+    <div className="w-full h-full rounded-lg overflow-hidden shadow-lg relative bg-[#242424]">
       <MapContainer
         center={center}
         zoom={zoom}
-        style={{ height: "100%", width: "100%", background: '#242424' }}
+        style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
         zoomControl={false}
       >
@@ -255,28 +253,14 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
           className="dark-map-tiles"
         />
 
-        {/* CONTROLS */}
         <MapController center={center} recenterKey={recenterKey} />
         <RouteBoundsFitter route={displayRoute || undefined} />
 
-        {/* CLICK HANDLER */}
         {onMapClick && <MapClickHandler onClick={onMapClick} />}
-
-        {/* MARKERS */}
         <MapMarkers markers={markers} />
 
-        {/* ROUTE POLYLINE - Only Draw if Exists */}
-        {displayRoute && displayRoute.length > 0 && (
-          <Polyline
-            positions={displayRoute}
-            pathOptions={{
-              color: "#22c55e",
-              weight: 6,
-              opacity: 0.9,
-              lineCap: 'round',
-              lineJoin: 'round'
-            }}
-          />
+        {displayRoute && (
+          <Polyline positions={displayRoute} pathOptions={{ color: "#22c55e", weight: 6, opacity: 0.9 }} />
         )}
       </MapContainer>
     </div>
