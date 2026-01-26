@@ -10,6 +10,7 @@ import DriverInfoCard from "@/components/DriverInfoCard";
 import RatingDialog from "@/components/RatingDialog";
 import CompleteProfileDialog from "@/components/CompleteProfileDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle } from "lucide-react";
 
 /**
@@ -597,6 +598,8 @@ const CustomerDashboard = () => {
 
     return markers;
   };
+
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
