@@ -129,30 +129,43 @@ export const DriverOffersList = ({
     const [localPrice, setLocalPrice] = useState(currentPrice);
     const [autoAccept, setAutoAccept] = useState(false);
     const [rejectedOfferIds, setRejectedOfferIds] = useState<Set<string>>(new Set());
-    const [searchTimeLeft, setSearchTimeLeft] = useState(120); // 2 minutes
+
+    // Timer State
+    const TOTAL_SEARCH_TIME = 120; // 2 minutes
+    const [searchTimeLeft, setSearchTimeLeft] = useState(TOTAL_SEARCH_TIME);
+    const [isTimeout, setIsTimeout] = useState(false);
 
     // Initialization
     useEffect(() => {
         if (currentPrice > 0) setLocalPrice(currentPrice);
     }, [currentPrice]);
 
+    // Auto-Accept Sync
+    useEffect(() => {
+        const syncAutoAccept = async () => {
+            const priceToSet = autoAccept ? localPrice : null;
+            // Fire and forget update
+            await supabase.from('rides').update({ auto_accept_price: priceToSet }).eq('id', rideId);
+        };
+        syncAutoAccept();
+    }, [autoAccept, localPrice, rideId]);
+
     // Timer Logic
     useEffect(() => {
-        if (offers.length > 0) return; // Stop timer if we have offers? Or keep going? The user said "Process" time.
-        // Usually, the 2 mins is "Time to find a driver". If offers exist, we don't auto-cancel.
+        if (offers.length > 0) return; // Stop timer if we have offers
 
         const timer = setInterval(() => {
             setSearchTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    onCancelRide(); // Auto cancel
+                    setIsTimeout(true);
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [offers.length]);
 
     const handleIncreasePrice = () => setLocalPrice(prev => prev + 15);
     const handleDecreasePrice = () => setLocalPrice(prev => Math.max(0, prev - 15));
@@ -161,6 +174,7 @@ export const DriverOffersList = ({
         if (onUpdatePrice) {
             onUpdatePrice(localPrice);
             toast({ title: "تم تحديث السعر", description: `أصبح السعر الآن ${localPrice} دج` });
+            // Reset timer on price update? Maybe. Let's keep it simple for now.
         }
     };
 
@@ -170,7 +184,7 @@ export const DriverOffersList = ({
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    // --- Subscription Logic (Same as before) ---
+    // --- Subscription Logic ---
     useEffect(() => {
         fetchOffers();
         const channel = supabase
@@ -188,7 +202,10 @@ export const DriverOffersList = ({
                 const { data: driver } = await supabase.from('users').select('full_name, profile_image, rating, total_rides, car_model').eq('id', offer.driver_id).single();
                 return { ...offer, driver: driver || { full_name: "Unknown", rating: 0 } };
             }));
-            setOffers(enrichedOffers.filter(o => !rejectedOfferIds.has(o.id)) as any);
+            const valid = enrichedOffers.filter(o => !rejectedOfferIds.has(o.id));
+            setOffers(valid as any);
+            // If offers exist, clear timeout if set
+            if (valid.length > 0) setIsTimeout(false);
         }
     };
 
@@ -199,6 +216,7 @@ export const DriverOffersList = ({
             return;
         }
         if (rejectedOfferIds.has(offerId)) return;
+
         const { data: offer } = await supabase.from('ride_offers').select('*').eq('id', offerId).single();
         if (offer) {
             const { data: driver } = await supabase.from('users').select('full_name, profile_image, rating, total_rides, car_model').eq('id', offer.driver_id).single();
@@ -207,9 +225,47 @@ export const DriverOffersList = ({
                 if (prev.find(o => o.id === offerId)) return prev;
                 return [...prev, enriched].sort((a, b) => a.amount - b.amount);
             });
+            setIsTimeout(false); // Reset timeout
             toast({ title: "عرض جديد!", description: `${driver?.full_name} عرض ${offer.amount} دج` });
         }
     };
+
+    // Calculate Progress Percentage
+    const progressPercent = (searchTimeLeft / TOTAL_SEARCH_TIME) * 100;
+
+    if (isTimeout && offers.length === 0) {
+        return (
+            <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#111] rounded-t-[2rem] border-t border-white/10 p-6 animate-in slide-in-from-bottom-10">
+                <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-2">
+                        <Clock className="w-8 h-8 text-yellow-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-white">لم يتم العثور على سائقين</h3>
+                        <p className="text-gray-400 mt-1">انتهى الوقت المحدد للبحث. هل تريد الاستمرار في البحث أو إلغاء الطلب؟</p>
+                    </div>
+                    <div className="flex gap-3 w-full mt-4">
+                        <Button
+                            className="flex-1 bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 rounded-xl"
+                            onClick={() => {
+                                setSearchTimeLeft(TOTAL_SEARCH_TIME);
+                                setIsTimeout(false);
+                            }}
+                        >
+                            استمرار البحث
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="flex-1 bg-[#333] hover:bg-neutral-800 text-white font-bold h-12 rounded-xl"
+                            onClick={onCancelRide}
+                        >
+                            إلغاء الطلب
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#111] rounded-t-[2rem] border-t border-white/10 shadow-[0_-10px_50px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-10 flex flex-col max-h-[90vh]">
@@ -218,7 +274,15 @@ export const DriverOffersList = ({
                 <div className="w-12 h-1 bg-white/20 rounded-full"></div>
             </div>
 
-            <div className="overflow-y-auto flex-1 px-5 pt-2 pb-6">
+            {/* Global Timer Progress Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gray-800/50">
+                <div
+                    className="h-full bg-[#84cc16] transition-all duration-1000 ease-linear shadow-[0_0_10px_#84cc16]"
+                    style={{ width: `${progressPercent}%` }}
+                ></div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-5 pt-4 pb-6 scrollbar-hide">
 
                 {/* Header: Title & Timer */}
                 <div className="flex justify-between items-center mb-4">
@@ -226,32 +290,35 @@ export const DriverOffersList = ({
                         <h2 className="text-white font-bold text-lg">{offers.length > 0 ? `يعرض شريكان (${offers.length})` : "في انتظار عروض من السائقين..."}</h2>
                         {offers.length === 0 && <p className="text-xs text-gray-400">نبحث عن أفضل العروض لك</p>}
                     </div>
-                    <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                        <span className="font-mono text-[#84cc16] font-bold">{formatTime(searchTimeLeft)}</span>
+                    <div className="bg-[#2A2A2A] px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
+                        <Clock className="w-3 h-3 text-[#84cc16]" />
+                        <span className="font-mono text-white font-bold text-sm">{formatTime(searchTimeLeft)}</span>
                     </div>
                 </div>
 
                 {/* Price Control Section */}
                 <div className="flex gap-2 mb-4">
-                    <Button variant="secondary" className="h-14 w-20 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg" onClick={handleIncreasePrice}>
+                    <Button variant="secondary" className="h-14 w-20 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg transition-transform active:scale-95" onClick={handleIncreasePrice}>
                         + 15
                     </Button>
                     <div className="flex-1 bg-[#2A2A2A] rounded-xl flex flex-col items-center justify-center border border-white/5">
-                        <span className="text-2xl font-bold text-white">{localPrice} <span className="text-sm font-normal text-gray-400">دج</span></span>
+                        <span className="text-3xl font-bold text-white tracking-tight">{localPrice} <span className="text-sm font-normal text-gray-500">دج</span></span>
                     </div>
-                    <Button variant="secondary" className="h-14 w-20 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg" onClick={handleDecreasePrice}>
+                    <Button variant="secondary" className="h-14 w-20 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg transition-transform active:scale-95" onClick={handleDecreasePrice}>
                         - 15
                     </Button>
                 </div>
 
                 <Button className="w-full h-12 bg-[#D1FA58] hover:bg-[#b0d64a] text-black font-bold text-lg rounded-xl mb-4 shadow-lg shadow-[#D1FA58]/10" onClick={submitPriceUpdate}>
-                    رفع الأجرة
+                    تأكيد رفع الأجرة
                 </Button>
 
                 {/* Auto Accept Switch */}
                 <div className="bg-[#2A2A2A] p-4 rounded-2xl border border-white/5 flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <Zap className={`w-6 h-6 ${autoAccept ? 'text-[#84cc16] fill-current' : 'text-gray-500'}`} />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${autoAccept ? 'bg-[#84cc16]/20' : 'bg-white/5'}`}>
+                            <Zap className={`w-5 h-5 ${autoAccept ? 'text-[#84cc16] fill-current' : 'text-gray-500'}`} />
+                        </div>
                         <div className="text-right">
                             <p className="text-white text-sm font-bold">قبول تلقائي بسعر {localPrice} دج</p>
                             <p className="text-xs text-gray-500">وقت انتظار 5 من الدقائق</p>
@@ -262,30 +329,33 @@ export const DriverOffersList = ({
 
                 {/* Cash Info */}
                 <div className="bg-[#2A2A2A] p-4 rounded-2xl border border-white/5 flex justify-between items-center mb-4">
-                    <span className="text-white font-bold">{localPrice} دج نقداً</span>
-                    <div className="text-[#84cc16]">💵</div>
+                    <span className="text-white font-bold text-sm">الدفع نقداً</span>
+                    <div className="flex items-center gap-2 text-[#84cc16] font-bold">
+                        <span>{localPrice} دج</span>
+                        <span>💵</span>
+                    </div>
                 </div>
 
                 {/* Route Info Cards */}
                 <div className="bg-[#2A2A2A] rounded-2xl border border-white/5 mb-6 overflow-hidden">
                     <div className="p-4 border-b border-white/5 flex items-start gap-3">
-                        <div className="mt-1 w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                        <div>
-                            <p className="text-gray-400 text-xs mb-0.5">موقع الانطلاق</p>
-                            <p className="text-white text-sm font-medium line-clamp-1">{pickupAddress}</p>
+                        <div className="mt-1 w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] shrink-0"></div>
+                        <div className="min-w-0">
+                            <p className="text-gray-500 text-[10px] mb-0.5">موقع الانطلاق</p>
+                            <p className="text-white text-sm font-medium leading-snug break-words">{pickupAddress}</p>
                         </div>
                     </div>
                     <div className="p-4 flex items-start gap-3">
-                        <div className="mt-1 w-3 h-3 rounded-full bg-[#84cc16] shadow-[0_0_10px_rgba(132,204,22,0.5)]"></div>
-                        <div>
-                            <p className="text-gray-400 text-xs mb-0.5">الوجهة</p>
-                            <p className="text-white text-sm font-medium line-clamp-1">{destinationAddress}</p>
+                        <div className="mt-1 w-3 h-3 rounded-full bg-[#84cc16] shadow-[0_0_10px_rgba(132,204,22,0.5)] shrink-0"></div>
+                        <div className="min-w-0">
+                            <p className="text-gray-500 text-[10px] mb-0.5">الوجهة</p>
+                            <p className="text-white text-sm font-medium leading-snug break-words">{destinationAddress}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Offers List */}
-                <div className="space-y-4 mb-6">
+                <div className="space-y-3 mb-6">
                     {offers.map((offer) => (
                         <OfferCard
                             key={offer.id}

@@ -15,4 +15,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rides' AND column_name = 'is_bidding') THEN
         ALTER TABLE rides ADD COLUMN is_bidding BOOLEAN DEFAULT FALSE;
     END IF;
+
+    -- 4. Add 'auto_accept_price' column for Auto-Accept Logic
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rides' AND column_name = 'auto_accept_price') THEN
+        ALTER TABLE rides ADD COLUMN auto_accept_price DECIMAL(10,2);
+    END IF;
 END $$;
