@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone, CheckCircle, Navigation, Clock, User } from "lucide-react";
-import { motion, PanInfo, AnimatePresence } from "framer-motion";
+import { Phone, CheckCircle, Navigation, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActiveRideCardProps {
@@ -24,8 +23,7 @@ const ActiveRideCard = ({
     onToggleExpand,
 }: ActiveRideCardProps) => {
 
-    // Logic to calculate progress, distance, etc. (Extracted from DriverDashboard inline code)
-
+    // Logic to calculate progress, distance, etc.
     let targetLat = 0, targetLng = 0;
     let totalDist = 0;
     let mode = "";
@@ -45,7 +43,6 @@ const ActiveRideCard = ({
     let distKm = 0;
     let timeMin = 0;
     let progressPercent = 0;
-    let arrivalTime = "--:--";
 
     if (driverLocation) {
         const R = 6371;
@@ -67,133 +64,112 @@ const ActiveRideCard = ({
         } else {
             progressPercent = Math.max(10, Math.min(95, (1 - (distKm / 5)) * 100));
         }
-
-        arrivalTime = new Date(Date.now() + timeMin * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    const handleDragEnd = (_: any, info: PanInfo) => {
-        if (info.offset.y > 50 && isExpanded) {
-            onToggleExpand();
-        } else if (info.offset.y < -50 && !isExpanded) {
-            onToggleExpand();
-        }
-    };
-
     return (
-        <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.2}
-            onDragEnd={handleDragEnd}
+        <div
             className={cn(
-                "fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 overflow-hidden flex flex-col",
-                // isExpanded ? "h-auto" : "h-[220px]" // Dynamic height handling via AnimatePresence or just block flow
+                "fixed bottom-0 left-0 right-0 z-[3000] bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                isExpanded ? "h-[85vh] sm:h-[600px]" : "h-[180px]" // Explicit height control
             )}
-            style={{ touchAction: "none" }}
         >
-            {/* Handle Bar */}
+            {/* Handle Bar Area - Click to Toggle */}
             <div
-                className="w-full flex items-center justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-center pt-4 pb-2 cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors"
                 onClick={onToggleExpand}
             >
                 <div className="h-1.5 w-12 bg-gray-600 rounded-full"></div>
             </div>
 
-            <div className="px-6 pb-6 flex flex-col gap-4">
+            <div className="px-6 flex flex-col h-full">
 
-                {/* Navigation Header (Always Visible) */}
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className={cn(
-                                "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                                currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-lime-500 text-black"
-                            )}>
-                                {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
-                            </span>
+                {/* === HEADER SECTION (Always Visible) === */}
+                <div className="shrink-0 mb-4" onClick={!isExpanded ? onToggleExpand : undefined}>
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-lime-500 text-black"
+                                )}>
+                                    {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
+                                </span>
+                            </div>
+                            <h2 className="text-xl font-bold text-white leading-tight">
+                                {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
+                            </h2>
                         </div>
-                        <h2 className="text-xl font-bold text-white leading-tight">
-                            {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
-                        </h2>
+                        <div className="text-right">
+                            <div className="text-2xl font-bold text-white">{distKm.toFixed(1)} <span className="text-xs text-gray-500">km</span></div>
+                            <div className="text-xs text-gray-400 font-medium">{timeMin} min remaining</div>
+                        </div>
                     </div>
-                    <div className="text-right">
-                        <div className="text-2xl font-bold text-white">{distKm.toFixed(1)} <span className="text-xs text-gray-500">km</span></div>
-                        <div className="text-xs text-gray-400 font-medium">{timeMin} min remaining</div>
-                    </div>
-                </div>
 
-                {/* Progress Bar (Always Visible) */}
-                <div className="relative h-2 bg-gray-800 rounded-full mt-1">
-                    <div
-                        className="absolute top-0 left-0 bottom-0 bg-[#84cc16] rounded-full shadow-[0_0_10px_#84cc16] transition-all duration-1000"
-                        style={{ width: `${progressPercent}%` }}
-                    ></div>
-                    <div
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16] transition-all duration-1000"
-                        style={{ left: `${progressPercent}%` }}
-                    >
-                        <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
-                    </div>
-                </div>
-
-                {/* Collapsible Content */}
-                <AnimatePresence>
-                    {isExpanded && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden space-y-4 pt-2"
+                    {/* Progress Bar */}
+                    <div className="relative h-2 bg-gray-800 rounded-full">
+                        <div
+                            className="absolute top-0 left-0 bottom-0 bg-[#84cc16] rounded-full shadow-[0_0_10px_#84cc16] transition-all duration-1000"
+                            style={{ width: `${progressPercent}%` }}
+                        ></div>
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16] transition-all duration-1000"
+                            style={{ left: `${progressPercent}%` }}
                         >
-                            {/* Customer Info */}
-                            <div className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
-                                <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10 shrink-0">
-                                    {customerInfo?.profile_image ? (
-                                        <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xl font-bold text-gray-300">{customerInfo?.full_name?.[0] || <User />}</div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white truncate">{customerInfo?.full_name || "Customer"}</h3>
-                                    <div className="flex items-center gap-1 text-xs text-lime-500">
-                                        <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} <span className="text-gray-500">({customerInfo?.total_rides || 0} rides)</span>
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <p className="text-lg font-bold text-white">{currentRide.final_price || currentRide.price} DA</p>
-                                    <p className="text-[10px] text-gray-400 uppercase">CASH</p>
-                                </div>
-                            </div>
+                            <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
+                        </div>
+                    </div>
+                </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                                <Button
-                                    size="icon"
-                                    variant="secondary"
-                                    className="h-14 w-14 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 shrink-0"
-                                    onClick={onCallCustomer}
-                                >
-                                    <Phone className="w-6 h-6 text-[#84cc16]" />
-                                </Button>
-                                <Button
-                                    className="flex-1 h-14 rounded-xl bg-[#84cc16] hover:bg-[#E5C838] text-black text-lg font-bold shadow-[0_0_20px_rgba(132,204,22,0.3)] transition-all active:scale-95"
-                                    onClick={onCompleteRide}
-                                >
-                                    <CheckCircle className="mr-2 w-5 h-5" /> COMPLETE RIDE
-                                </Button>
+                {/* === EXPANDED CONTENT (Scrollable if needed) === */}
+                <div className={cn(
+                    "flex-1 overflow-y-auto space-y-6 pt-4 pb-8 transition-opacity duration-300",
+                    isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}>
+
+                    {/* Customer Info */}
+                    <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <div className="w-14 h-14 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center">
+                            {customerInfo?.profile_image ? (
+                                <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
+                            ) : (
+                                <User className="w-6 h-6 text-gray-400" />
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-white text-lg truncate">{customerInfo?.full_name || "Customer"}</h3>
+                            <div className="flex items-center gap-1 text-sm text-lime-500">
+                                <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} <span className="text-gray-500">({customerInfo?.total_rides || 0} rides)</span>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </div>
+                        <div className="text-right shrink-0">
+                            <p className="text-2xl font-bold text-white">{currentRide.final_price || currentRide.price} <span className="text-sm">DA</span></p>
+                            <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">CASH</p>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-3">
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full h-14 rounded-xl border-[#84cc16] text-[#84cc16] hover:bg-[#84cc16] hover:text-black font-bold text-lg"
+                            onClick={onCallCustomer}
+                        >
+                            <Phone className="mr-3 w-5 h-5" /> Call Customer
+                        </Button>
+
+                        <Button
+                            size="lg"
+                            className="w-full h-16 rounded-xl bg-[#84cc16] hover:bg-[#E5C838] text-black text-xl font-bold shadow-[0_0_20px_rgba(132,204,22,0.3)] transition-all active:scale-95"
+                            onClick={onCompleteRide}
+                        >
+                            <CheckCircle className="mr-3 w-6 h-6" /> COMPLETE RIDE
+                        </Button>
+                    </div>
+                </div>
 
             </div>
-        </motion.div>
+        </div>
     );
 };
 
