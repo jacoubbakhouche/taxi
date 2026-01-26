@@ -639,9 +639,17 @@ const DriverDashboard = () => {
   /*
      UPDATED FOR BIDDING SYSTEM:
      Drivers now SEND OFFERS instead of instantly accepting.
+     HYBRID: If is_bidding is false, we Accept Instantly.
   */
   const handleSendOffer = async (price: number) => {
     if (!pendingRide || !userId) return;
+
+    // HYBRID LOGIC: Standard Ride Check
+    // We check if the ride is explicitly NOT a bidding ride
+    if ((pendingRide as any).is_bidding === false) {
+      await handleInstantAccept();
+      return;
+    }
 
     try {
       setLoading(true);

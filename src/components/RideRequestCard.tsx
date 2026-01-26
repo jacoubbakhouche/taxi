@@ -15,6 +15,7 @@ interface RideRequestCardProps {
     duration: number;
     customer_offer_price?: number;
     status?: string;
+    is_bidding?: boolean;
   };
   customer: {
     full_name: string;
@@ -22,7 +23,7 @@ interface RideRequestCardProps {
     rating: number;
     total_rides: number;
     phone?: string;
-  };
+  } | null; // Allow null
   onAccept: (price: number) => void;
   onReject: () => void;
 }
@@ -33,6 +34,7 @@ const RideRequestCard = ({ ride, customer, onAccept, onReject }: RideRequestCard
 
   // Initial offer is either what customer typed or the calc price
   const displayedPrice = ride.customer_offer_price || ride.price;
+  const isBidding = ride.is_bidding !== false; // Default to true if undefined to be safe, or check logic
 
   const handleAccept = () => {
     onAccept(displayedPrice);
@@ -43,6 +45,8 @@ const RideRequestCard = ({ ride, customer, onAccept, onReject }: RideRequestCard
     if (!amount || amount <= 0) return;
     onAccept(amount);
   };
+
+  if (!customer) return null; // Safety check
 
   if (isCountering) {
     return (
@@ -98,25 +102,28 @@ const RideRequestCard = ({ ride, customer, onAccept, onReject }: RideRequestCard
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <Avatar className="w-12 h-12 border border-white/10">
-              <AvatarImage src={customer.profile_image || undefined} />
+              <AvatarImage src={customer?.profile_image || undefined} />
               <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-bold text-lg">{customer.full_name}</h3>
+              <h3 className="font-bold text-lg">{customer?.full_name || "عميل"}</h3>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <div className="flex items-center text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded">
                   <Star className="w-3 h-3 mr-1 fill-current" />
-                  {customer.rating.toFixed(1)}
+                  {customer?.rating?.toFixed(1) || "5.0"}
                 </div>
-                <span>• {customer.total_rides} رحلة</span>
+                <span>• {customer?.total_rides || 0} رحلة</span>
               </div>
             </div>
           </div>
 
           <div className="text-left">
             <h2 className="text-3xl font-bold text-[#84cc16]">{Math.round(displayedPrice)} <span className="text-sm text-gray-500 font-normal">دج</span></h2>
-            {ride.customer_offer_price && ride.customer_offer_price !== ride.price && (
+            {isBidding && ride.customer_offer_price && ride.customer_offer_price !== ride.price && (
               <p className="text-xs text-orange-400">عرض العميل</p>
+            )}
+            {!isBidding && (
+              <p className="text-xs text-gray-500">سعر ثابت</p>
             )}
           </div>
         </div>
@@ -165,20 +172,31 @@ const RideRequestCard = ({ ride, customer, onAccept, onReject }: RideRequestCard
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            className="h-12 bg-transparent border-white/20 text-white hover:bg-white/10"
-            onClick={() => setIsCountering(true)}
-          >
-            اقتراح سعر
-          </Button>
+          {isBidding ? (
+            <>
+              <Button
+                variant="outline"
+                className="h-12 bg-transparent border-white/20 text-white hover:bg-white/10"
+                onClick={() => setIsCountering(true)}
+              >
+                اقتراح سعر
+              </Button>
 
-          <Button
-            className="h-12 bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold text-lg shadow-[0_0_20px_rgba(132,204,22,0.3)] animate-pulse"
-            onClick={handleAccept}
-          >
-            قبول {Math.round(displayedPrice)} دج
-          </Button>
+              <Button
+                className="h-12 bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold text-lg shadow-[0_0_20px_rgba(132,204,22,0.3)] animate-pulse"
+                onClick={handleAccept}
+              >
+                قبول {Math.round(displayedPrice)} دج
+              </Button>
+            </>
+          ) : (
+            <Button
+              className="col-span-2 h-14 bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold text-xl shadow-[0_0_20px_rgba(132,204,22,0.3)] animate-pulse"
+              onClick={handleAccept}
+            >
+              قبول الطلب ({Math.round(displayedPrice)} دج)
+            </Button>
+          )}
 
           <Button
             variant="ghost"

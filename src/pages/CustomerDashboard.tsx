@@ -45,6 +45,7 @@ const CustomerDashboard = () => {
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
   const [price, setPrice] = useState(0);
+  const [estimatedPrice, setEstimatedPrice] = useState(0); // For Hybrid Logic
 
   // --- Driver State ---
   const [driverInfo, setDriverInfo] = useState<any>(null);
@@ -381,7 +382,9 @@ const CustomerDashboard = () => {
 
     setDistance(d);
     setDuration((d / 40) * 60); // 40km/h avg
-    setPrice(100 + (d * 50)); // 100 base + 50 per km
+    const calcPrice = 100 + (d * 50);
+    setPrice(calcPrice); // 100 base + 50 per km
+    setEstimatedPrice(calcPrice); // Store original for comparison
     setRoute([userLocation, destination]);
   };
 
@@ -505,6 +508,7 @@ const CustomerDashboard = () => {
         destination_address: searchQuery,
         price: price, // Calculated Base Price
         customer_offer_price: price, // Active Bid Price
+        is_bidding: Math.abs(price - estimatedPrice) > 1, // Hybrid Logic: Only bidding if price changed
         distance: distance,
         duration: duration,
         status: 'pending'
