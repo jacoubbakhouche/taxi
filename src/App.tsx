@@ -9,6 +9,7 @@ import CustomerAuth from "./pages/CustomerAuth";
 import DriverAuth from "./pages/DriverAuth";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerProfile from "./pages/CustomerProfile";
+import RideHistory from "./pages/RideHistory";
 import DriverDashboard from "./pages/DriverDashboard";
 import CustomerProfileView from "./pages/CustomerProfileView";
 import DriverProfile from "./pages/DriverProfile";
@@ -44,6 +45,7 @@ const App = () => {
             <Route path="/driver/auth" element={<DriverAuth />} />
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
+            <Route path="/customer/history" element={<RideHistory />} />
             <Route path="/driver/dashboard" element={<DriverDashboard />} />
             <Route path="/driver/profile" element={<DriverProfile />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
