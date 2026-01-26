@@ -726,21 +726,21 @@ const CustomerDashboard = () => {
       {/* --- Auction / Pending State --- */}
       {
         rideStatus === 'pending' && currentRideId && (
-            <DriverOffersList 
-                rideId={currentRideId}
-                onAcceptOffer={async (offerId) => {
-                    try {
-                        const { error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });
-                        if (error) throw error;
-                        setRideStatus('accepted');
-                         // Driver info will update via realtime subscription or we can force fetch
-                         toast({ title: "تم قبول العرض! 🎉", description: "السائق قادم إليك" });
-                    } catch (e) {
-                         toast({ title: "فشل قبول العرض", variant: "destructive" });
-                    }
-                }}
-                onCancelRide={handleCancelRide}
-            />
+          <DriverOffersList
+            rideId={currentRideId}
+            onAcceptOffer={async (offerId) => {
+              try {
+                const { error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });
+                if (error) throw error;
+                setRideStatus('accepted');
+                // Driver info will update via realtime subscription or we can force fetch
+                toast({ title: "تم قبول العرض! 🎉", description: "السائق قادم إليك" });
+              } catch (e) {
+                toast({ title: "فشل قبول العرض", variant: "destructive" });
+              }
+            }}
+            onCancelRide={handleCancelRide}
+          />
         )
       }
 
@@ -769,14 +769,14 @@ const CustomerDashboard = () => {
             ) : (
               <div className="space-y-6">
                 <div className="flex justify-between items-center text-right" dir="rtl">
-                   <div className="flex-1 pl-4">
-                     {/* BIDDING CONTROLS */}
-                      <BiddingControls 
-                        estimatedPrice={price} 
-                        onPriceChange={(newPrice) => setPrice(newPrice)} // We reuse 'price' state as the canonical bid
-                     />
-                   </div>
-                   
+                  <div className="flex-1 pl-4">
+                    {/* BIDDING CONTROLS */}
+                    <BiddingControls
+                      estimatedPrice={price}
+                      onPriceChange={(newPrice) => setPrice(newPrice)} // We reuse 'price' state as the canonical bid
+                    />
+                  </div>
+
                   <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5 shrink-0" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
                     تغيير الوجهة
                   </Button>
@@ -790,9 +790,9 @@ const CustomerDashboard = () => {
                     <p className="text-xs text-gray-500">الوجهة</p>
                     <p className="font-bold text-sm truncate">{searchQuery}</p>
                     <div className="flex text-xs text-gray-400 gap-2 mt-1">
-                         <span>{distance.toFixed(1)} كم</span>
-                         <span>•</span>
-                         <span>{duration.toFixed(0)} دقيقة</span>
+                      <span>{distance.toFixed(1)} كم</span>
+                      <span>•</span>
+                      <span>{duration.toFixed(0)} دقيقة</span>
                     </div>
                   </div>
                 </div>
@@ -814,52 +814,27 @@ const CustomerDashboard = () => {
       {/* We removing the duplicate pending view block to avoid overlap */}
 
       {/* --- Radar Animation Layer (Optional Background for Pending) --- */}
-       {
+      {
         rideStatus === 'pending' && !candidateDriver && (
-           // Minimal loader or nothing. The DriverOffersList covers the screen.
-           null
-        )
-       }
-              <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
-                <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
-                <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
-              </div>
-            </div>
-
-            <div className="space-y-2 z-10">
-              <h2 className="text-3xl font-bold text-white tracking-tight">جاري البحث عن كابتن...</h2>
-              <p className="text-gray-400 text-sm">يتم الآن إبلاغ السائقين القريبين بطلبك</p>
-            </div>
-
-            <div className="z-10 w-full max-w-xs px-6">
-              <Button
-                variant="destructive"
-                onClick={handleCancelRide}
-                className="w-full h-14 text-lg rounded-2xl shadow-lg border border-red-500/20 hover:bg-red-600/90 transition-all font-bold"
-              >
-                إلغاء الطلب
-              </Button>
-              <p className="mt-4 text-xs text-center text-gray-500">
-                سيتم نقلك تلقائياً عند قبول الطلب
-              </p>
-            </div>
-          </div >
+          // Minimal loader or nothing. The DriverOffersList covers the screen.
+          null
         )
       }
 
-{/* --- Active Ride (Accepted/In Progress) --- */ }
-{
-  (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
-    <DriverInfoCard
-      driver={driverInfo}
-      rideStatus={rideStatus}
-      onCancel={handleCancelRide}
-      onEndRide={handleEndRide}
-    />
-  )
-}
 
-{/* --- Rating Dialog --- */ }
+      {/* --- Active Ride (Accepted/In Progress) --- */}
+      {
+        (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
+          <DriverInfoCard
+            driver={driverInfo}
+            rideStatus={rideStatus}
+            onCancel={handleCancelRide}
+            onEndRide={handleEndRide}
+          />
+        )
+      }
+
+      {/* --- Rating Dialog --- */}
       <RatingDialog
         open={showRating}
         onOpenChange={setShowRating}
