@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Car, MapPin, User, Navigation } from "lucide-react";
+import { Car, MapPin, User, Navigation, Crosshair } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Fix Leaflet default icon issue
 if (typeof window !== 'undefined') {
@@ -32,61 +33,74 @@ interface MapProps {
   recenterKey?: number;
 }
 
-// Custom Hook to manage Map Center logic without "fighting" user
+// === SMART MAP CONTROLLER ===
+// This handles the "Auto-Follow" logic specifically requested by the user.
 function MapController({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
   const map = useMap();
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const [showRecenterBtn, setShowRecenterBtn] = useState(false);
-  const lastCenter = useRef<[number, number]>(center);
 
-  // Detect manual interactions
+  // 1. State: isAutoCenter
+  const [isAutoCenter, setIsAutoCenter] = useState(true);
+  const initializedRef = useRef(false);
+
+  // 2. Event Listeners: Detect User Interaction
   useMapEvents({
     dragstart: () => {
-      setIsUserInteracting(true);
-      setShowRecenterBtn(true);
+      // User started dragging -> STOP auto-following
+      setIsAutoCenter(false);
     },
     zoomstart: () => {
-      setIsUserInteracting(true);
-      setShowRecenterBtn(true);
+      // User started zooming -> STOP auto-following
+      setIsAutoCenter(false);
     }
   });
 
-  // Handle programmatic updates (GPS updates)
+  // 4. Update Logic: Follow GPS ONLY if auto-center is ON
   useEffect(() => {
-    // If user is NOT interacting, we can auto-follow.
-    // BUT to avoid excessive jitter, usually we only flyTo if distance is significant OR it's a forced recenter.
+    // Always initialize map center once
+    if (!initializedRef.current && center) {
+      map.setView(center, map.getZoom());
+      initializedRef.current = true;
+      return;
+    }
 
-    // Logic: If user hasn't touched the map, keep centered on driver (GPS).
-    if (!isUserInteracting) {
+    if (isAutoCenter && center) {
+      // Use efficient flyTo
       map.flyTo(center, 16, { animate: true, duration: 1.5 });
     }
-  }, [center, map, isUserInteracting]);
+  }, [center, isAutoCenter, map]);
 
-  // Handle Forced Recenter (from Prop or Button)
+  // Handle External Recenter Triggers (e.g. from parent prop)
   useEffect(() => {
     if (recenterKey) {
       handleRecenter();
     }
   }, [recenterKey]);
 
+  // 3. Re-Center Function
   const handleRecenter = () => {
-    setIsUserInteracting(false); // Reset interaction flag
-    setShowRecenterBtn(false);
+    setIsAutoCenter(true); // Re-enable lock
     map.flyTo(center, 16, { animate: true, duration: 1 });
   };
 
-  if (!showRecenterBtn) return null;
-
   return (
-    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "100px", marginRight: "16px", pointerEvents: "auto", zIndex: 1000 }}>
+    <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "120px", marginRight: "16px", pointerEvents: "auto", zIndex: 1000 }}>
       <button
         onClick={(e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // prevent map click
           handleRecenter();
         }}
-        className="w-12 h-12 rounded-full bg-[#1A1A1A] border border-[#84cc16]/50 shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center hover:bg-[#252525] active:scale-95 transition-all duration-300 group"
+        className={cn(
+          "w-12 h-12 rounded-full border shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center transition-all duration-300 group active:scale-95",
+          isAutoCenter
+            ? "bg-[#84cc16] border-[#84cc16] text-black" // Active: Green
+            : "bg-[#1A1A1A] border-[#84cc16]/50 text-[#84cc16] hover:bg-[#252525]" // Inactive: Dark
+        )}
       >
-        <Navigation className="w-5 h-5 text-[#84cc16] fill-[#84cc16]/20 group-hover:rotate-45 transition-transform duration-300" />
+        {/* Show different icon based on state or just stable Navigation icon? User requested 'Crosshair' or 'Navigation' */}
+        <Navigation className={cn(
+          "w-5 h-5 transition-transform duration-300",
+          isAutoCenter ? "fill-current rotate-45" : "fill-[#84cc16]/20 group-hover:rotate-45"
+        )} />
       </button>
     </div>
   );
@@ -101,13 +115,12 @@ function RouteBoundsFitter({ route }: { route?: [number, number][] }) {
     if (route && route.length > 1 && !hasFitted.current) {
       const bounds = L.latLngBounds(route);
       if (bounds.isValid()) {
-        console.log("Fitting bounds for route...");
         map.fitBounds(bounds, {
           padding: [50, 50],
           maxZoom: 16,
           animate: true
         });
-        hasFitted.current = true; // Mark as fitted so we don't fight user later
+        hasFitted.current = true; // Mark as fitted
       }
     }
   }, [route, map]);
