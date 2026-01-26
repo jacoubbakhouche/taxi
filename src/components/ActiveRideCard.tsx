@@ -215,8 +215,25 @@ const ActiveRideCard = ({
                                 </div>
                             </div>
 
-// Placeholder to avoid error while I check DriverDashboard.
-                        // I will start a sub-step or just check `DriverDashboard.tsx` first.
+                            {/* Actions */}
+                            <div className="space-y-4">
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="w-full h-14 rounded-xl border-gray-600 text-gray-300 hover:text-white hover:bg-white/10 font-medium text-lg"
+                                    onClick={onCallCustomer}
+                                >
+                                    <Phone className="mr-3 w-5 h-5" /> Call Customer
+                                </Button>
+
+                                <Button
+                                    size="lg"
+                                    className="w-full h-16 rounded-xl bg-[#84cc16] hover:bg-[#72b01d] text-black text-xl font-bold shadow-xl shadow-lime-500/20"
+                                    onClick={onCompleteRide}
+                                >
+                                    <CheckCircle className="mr-3 w-6 h-6" /> COMPLETE RIDE
+                                </Button>
+                            </div>
 
                         </div>
                     </motion.div>
