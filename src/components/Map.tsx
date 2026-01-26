@@ -34,51 +34,58 @@ interface MapProps {
 }
 
 // === SMART MAP CONTROLLER ===
-// This handles the "Auto-Follow" logic specifically requested by the user.
+// Logic: "Don't fight the user". 
+// - If user drags/zooms, STOP auto-following.
+// - Only follow if `isAutoCenter` is true.
 function MapController({ center, recenterKey }: { center: [number, number], recenterKey?: number }) {
   const map = useMap();
 
-  // 1. State: isAutoCenter
+  // 1. State: Auto-Center Active? (Default: true)
   const [isAutoCenter, setIsAutoCenter] = useState(true);
   const initializedRef = useRef(false);
 
-  // 2. Event Listeners: Detect User Interaction
+  // 2. Detect Manual Interaction to PAUSE auto-center
   useMapEvents({
     dragstart: () => {
-      // User started dragging -> STOP auto-following
+      console.log("User dragging -> Pause AutoCenter");
       setIsAutoCenter(false);
     },
     zoomstart: () => {
-      // User started zooming -> STOP auto-following
+      console.log("User zooming -> Pause AutoCenter");
       setIsAutoCenter(false);
     }
   });
 
-  // 4. Update Logic: Follow GPS ONLY if auto-center is ON
+  // 3. Auto-Update Logic (The "Subscriber")
   useEffect(() => {
-    // Always initialize map center once
+    // Initial load setView
     if (!initializedRef.current && center) {
-      map.setView(center, map.getZoom());
+      map.setView(center, 16);
       initializedRef.current = true;
       return;
     }
 
+    // Passive Update: Only if AutoCenter is ON
     if (isAutoCenter && center) {
-      // Use efficient flyTo
-      map.flyTo(center, 16, { animate: true, duration: 1.5 });
+      // Use current zoom level to respect user preference even while tracking
+      // But ensure it's not too crazy (e.g. if current zoom is too far out < 10, maybe we force 15?)
+      // For now, respect map.getZoom() as requested.
+      map.flyTo(center, map.getZoom(), { animate: true, duration: 1.5 });
     }
   }, [center, isAutoCenter, map]);
 
-  // Handle External Recenter Triggers (e.g. from parent prop)
+  // 4. Force Recenter Trigger (e.g. from Parent)
   useEffect(() => {
     if (recenterKey) {
       handleRecenter();
     }
   }, [recenterKey]);
 
-  // 3. Re-Center Function
+  // 5. Button Action: Restore Auto-Center
   const handleRecenter = () => {
-    setIsAutoCenter(true); // Re-enable lock
+    console.log("Restoring AutoCenter...");
+    setIsAutoCenter(true);
+    // Force snap to a good "Navigation View" (Zoom 16)
     map.flyTo(center, 16, { animate: true, duration: 1 });
   };
 
@@ -86,41 +93,47 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
     <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "120px", marginRight: "16px", pointerEvents: "auto", zIndex: 1000 }}>
       <button
         onClick={(e) => {
-          e.stopPropagation(); // prevent map click
+          e.stopPropagation();
           handleRecenter();
         }}
         className={cn(
-          "w-12 h-12 rounded-full border shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center transition-all duration-300 group active:scale-95",
+          "w-14 h-14 rounded-full border-2 shadow-[0_4px_25px_rgba(0,0,0,0.6)] flex items-center justify-center transition-all duration-300 group active:scale-95",
           isAutoCenter
-            ? "bg-[#84cc16] border-[#84cc16] text-black" // Active: Green
-            : "bg-[#1A1A1A] border-[#84cc16]/50 text-[#84cc16] hover:bg-[#252525]" // Inactive: Dark
+            ? "bg-[#84cc16] border-[#84cc16] text-black" // LOCKED (Green)
+            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50" // UNLOCKED (White)
         )}
+        title="Re-center Map"
       >
-        {/* Show different icon based on state or just stable Navigation icon? User requested 'Crosshair' or 'Navigation' */}
         <Navigation className={cn(
-          "w-5 h-5 transition-transform duration-300",
-          isAutoCenter ? "fill-current rotate-45" : "fill-[#84cc16]/20 group-hover:rotate-45"
+          "w-6 h-6 transition-transform duration-300",
+          isAutoCenter ? "fill-current rotate-45" : "fill-transparent"
         )} />
       </button>
     </div>
   );
 }
 
-// Bounds Fitter Component - Runs ONCE on mount or Major Route Change
 function RouteBoundsFitter({ route }: { route?: [number, number][] }) {
   const map = useMap();
   const hasFitted = useRef(false);
+  const prevRouteRef = useRef<string>("");
 
   useEffect(() => {
-    if (route && route.length > 1 && !hasFitted.current) {
-      const bounds = L.latLngBounds(route);
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, {
-          padding: [50, 50],
-          maxZoom: 16,
-          animate: true
-        });
-        hasFitted.current = true; // Mark as fitted
+    // Only fit if route exists, has points, and changed significantly OR hasn't fitted yet
+    if (route && route.length > 1) {
+      const routeStr = JSON.stringify(route[0]) + JSON.stringify(route[route.length - 1]);
+      if (routeStr !== prevRouteRef.current) {
+        const bounds = L.latLngBounds(route);
+        if (bounds.isValid()) {
+          console.log("New Route Detected -> Fitting Bounds");
+          map.fitBounds(bounds, {
+            padding: [50, 50],
+            maxZoom: 16,
+            animate: true
+          });
+          hasFitted.current = true;
+          prevRouteRef.current = routeStr;
+        }
       }
     }
   }, [route, map]);
@@ -242,17 +255,27 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
           className="dark-map-tiles"
         />
 
-        {/* Smarter Controls that don't fight user */}
+        {/* CONTROLS */}
         <MapController center={center} recenterKey={recenterKey} />
         <RouteBoundsFitter route={displayRoute || undefined} />
 
+        {/* CLICK HANDLER */}
         {onMapClick && <MapClickHandler onClick={onMapClick} />}
+
+        {/* MARKERS */}
         <MapMarkers markers={markers} />
 
+        {/* ROUTE POLYLINE - Only Draw if Exists */}
         {displayRoute && displayRoute.length > 0 && (
           <Polyline
             positions={displayRoute}
-            pathOptions={{ color: "#22c55e", weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }}
+            pathOptions={{
+              color: "#22c55e",
+              weight: 6,
+              opacity: 0.9,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }}
           />
         )}
       </MapContainer>
