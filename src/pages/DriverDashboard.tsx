@@ -1128,11 +1128,10 @@ const DriverDashboard = () => {
       )}
 
       {/* --- Ride Request Card (Pending) --- */}
-      {pendingRide && isSheetExpanded && (
+      {pendingRide && (
         <RideRequestCard
           ride={pendingRide}
           customer={customerInfo}
-          distance={1.0} // Ideally passed
           onAccept={handleAcceptRide}
           onReject={handleRejectRide}
         />
