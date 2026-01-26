@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import RideRequestMap from "@/components/RideRequestMap";
 import RideRequestCard from "@/components/RideRequestCard";
+import ActiveRideCard from "@/components/ActiveRideCard";
 import RatingDialog from "@/components/RatingDialog";
 import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -1105,6 +1106,16 @@ const DriverDashboard = () => {
                 ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
               ] as any[] : [])
             ]}
+            route={
+              currentRide && driverLocation
+                ? [
+                  driverLocation,
+                  currentRide.status === 'accepted'
+                    ? [currentRide.pickup_lat, currentRide.pickup_lng]
+                    : [currentRide.destination_lat, currentRide.destination_lng]
+                ]
+                : undefined
+            }
           />
         )}
       </div>
@@ -1139,171 +1150,15 @@ const DriverDashboard = () => {
       {/* --- Active Ride Info (Accepted/In Progress) --- */}
       {/* --- Active Ride Info (Accepted/In Progress) --- */}
       {currentRide && !showRating && (
-        <div
-          className={cn(
-            "fixed bottom-0 left-0 right-0 z-[2000] bg-[#1A1A1A] rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out",
-            isSheetExpanded ? "translate-y-0" : "translate-y-[calc(100%-120px)]"
-          )}
-        >
-          {/* Handle Bar (Toggle) */}
-          <div
-            className="w-full flex justify-center pt-4 pb-2 cursor-pointer"
-            onClick={() => setIsSheetExpanded(!isSheetExpanded)}
-          >
-            <div className="h-1.5 w-12 bg-gray-700 rounded-full opacity-50"></div>
-          </div>
-
-          <div className="p-6 pt-2">
-
-            {/* Trip Progress (Moved to Top) */}
-            <div className="mb-6">
-              {(() => {
-                // Dynamic Calculation Logic
-                let targetLat = 0, targetLng = 0;
-                let totalDist = 0;
-                let mode = ""; // 'pickup' or 'dropoff'
-
-                if (currentRide.status === 'accepted') {
-                  targetLat = currentRide.pickup_lat;
-                  targetLng = currentRide.pickup_lng;
-                  mode = "pickup";
-                  // Estimate initial distance if known, else assume max 5km for bar scale? 
-                  // Ideally we'd have initial_distance in DB. 
-                  totalDist = 5; // Default reference for bar
-                } else if (currentRide.status === 'in_progress') {
-                  targetLat = currentRide.destination_lat;
-                  targetLng = currentRide.destination_lng;
-                  mode = "dropoff";
-                  totalDist = currentRide.distance || 10;
-                }
-
-                // Haversine Distance
-                const R = 6371; // km
-                const dLat = (targetLat - driverLocation[0]) * Math.PI / 180;
-                const dLon = (targetLng - driverLocation[1]) * Math.PI / 180;
-                const a =
-                  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(driverLocation[0] * Math.PI / 180) * Math.cos(targetLat * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                const distKm = R * c;
-
-                // Estimate Time (Assume 30km/h inside city)
-                const speedKmh = 30;
-                const timeHours = distKm / speedKmh;
-                const timeMin = Math.ceil(timeHours * 60);
-
-                // Progress Bar
-                // For pickup: calculate inverse progress (getting closer). 
-                // We'll just show 'remaining' concept. Visual bar represents completion.
-                // If distKm > totalDist, we are far (0% progress). If distKm is 0, we are there.
-                // Progress = 1 - (current / starting). But we don't have starting live.
-                // Simpler: Bar shows proximity. 
-                // Let's use a "Reverse Progress" for the slider.
-                // if we define progress as % of Journey Completed.
-                // This is hard without start point. But for 'in_progress' we have total trip distance.
-
-                let progressPercent = 0;
-                if (mode === 'dropoff' && totalDist > 0) {
-                  progressPercent = Math.max(0, Math.min(100, ((totalDist - distKm) / totalDist) * 100));
-                } else {
-                  // For pickup, maybe just show indeterminate or 50%?
-                  // Or let's just base it on distance: closer = more green. 
-                  // Say max pickup range is 3km.
-                  // progressPercent = (1 - (distKm / 3)) * 100
-                  progressPercent = Math.max(10, Math.min(95, (1 - (distKm / 5)) * 100));
-                }
-
-                // Format Arrival Time
-                const arrivalTime = new Date(Date.now() + timeMin * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                return (
-                  <>
-                    <div className="flex justify-between items-center mb-2 px-1">
-                      <div>
-                        <span className="text-2xl font-bold text-white">{distKm.toFixed(1)}</span> <span className="text-xs text-gray-500">km</span>
-                      </div>
-                      <div className="text-gray-600">•</div>
-                      <div>
-                        <span className="text-2xl font-bold text-white">{timeMin}</span> <span className="text-xs text-gray-500">min</span>
-                      </div>
-                    </div>
-                    <div className="relative h-2 bg-gray-800 rounded-full mx-1">
-                      <div
-                        className="absolute top-0 left-0 bottom-0 bg-[#84cc16] rounded-full shadow-[0_0_10px_#84cc16] transition-all duration-1000"
-                        style={{ width: `${progressPercent}%` }}
-                      ></div>
-                      <div
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#84cc16] transition-all duration-1000"
-                        style={{ left: `${progressPercent}%` }}
-                      >
-                        <Navigation className="w-3 h-3 text-[#84cc16] fill-current transform rotate-45" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3 px-1">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-bold text-white">{arrivalTime}</span>
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wider ml-1">ESTIMATED ARRIVAL</span>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Header (Status) */}
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                    currentRide.status === 'in_progress' ? "bg-blue-500 text-white" : "bg-lime-500 text-black"
-                  )}>
-                    {currentRide.status === 'in_progress' ? "IN TRIP" : "ACCEPTED"}
-                  </span>
-                </div>
-                <h2 className="text-xl font-bold text-white">
-                  {currentRide.status === 'in_progress' ? "Heading to Destination" : "Picking up Customer"}
-                </h2>
-              </div>
-              {/* Actions (Phone Button) */}
-              <div className="flex gap-2">
-                <Button size="icon" variant="secondary" className="rounded-full bg-[#84cc16] text-black hover:bg-[#65a30d]" onClick={() => window.location.href = `tel:${customerInfo?.phone}`}>
-                  <Phone className="w-5 h-5 fill-current" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Customer Info */}
-            <div className="flex items-center gap-4 mb-6 bg-white/5 p-4 rounded-2xl border border-white/5" onClick={handleCustomerClick}>
-              <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-white/10">
-                {customerInfo?.profile_image ? (
-                  <img src={customerInfo.profile_image} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-bold">{customerInfo?.full_name?.[0]}</div>
-                )}
-              </div>
-              <div>
-                <h3 className="font-bold text-white">{customerInfo?.full_name || "Customer"}</h3>
-                <div className="flex items-center gap-1 text-xs text-lime-500">
-                  <span>★</span> {customerInfo?.rating?.toFixed(1) || "5.0"} ({customerInfo?.total_rides || 0} rides)
-                </div>
-              </div>
-              <div className="flex-1 text-right">
-                <p className="text-xl font-bold text-white">{currentRide.final_price || currentRide.price} DA</p>
-                <p className="text-xs text-gray-500">CASH</p>
-              </div>
-            </div>
-
-            {/* Complete Button */}
-            <Button
-              size="lg"
-              className="w-full h-14 text-lg font-bold rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-lime-500/10"
-              onClick={handleCompleteRide}
-            >
-              <CheckCircle className="mr-2 w-6 h-6" /> COMPLETE RIDE
-            </Button>
-          </div>
-        </div>
+        <ActiveRideCard
+          currentRide={currentRide}
+          customerInfo={customerInfo}
+          driverLocation={driverLocation}
+          onCompleteRide={handleCompleteRide}
+          onCallCustomer={() => window.location.href = `tel:${customerInfo?.phone}`}
+          isExpanded={isSheetExpanded}
+          onToggleExpand={() => setIsSheetExpanded(!isSheetExpanded)}
+        />
       )}
 
       {/* Rating Dialog */}

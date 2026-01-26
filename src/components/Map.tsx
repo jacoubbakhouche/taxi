@@ -209,8 +209,33 @@ function RecenterControl({ center, onRecenter }: { center: [number, number], onR
   );
 }
 
+// Bounds Fitter Component
+function RouteBoundsFitter({ route }: { route?: [number, number][] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (route && route.length > 1) {
+      const bounds = L.latLngBounds(route);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 16,
+          animate: true
+        });
+      }
+    }
+  }, [route, map]);
+
+  return null;
+}
+
 const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }: MapProps) => {
   const [enhancedRoute, setEnhancedRoute] = useState<[number, number][] | null>(null);
+
+  // We check if "route" is passed as just [start, end] (2 points), then we fetch real path.
+  // OR if it's already a full path (many points), we just use it?
+  // For now, let's assume if it's 2 points, we fetch. If > 2, it's a pre-calculated route.
+  // Actually, standard usage in this app so far seems to be passing [start, end].
 
   const start = route && route.length === 2 ? route[0] : null;
   const end = route && route.length === 2 ? route[1] : null;
@@ -225,11 +250,11 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
     }
   }, [start?.[0], start?.[1], end?.[0], end?.[1]]);
 
-  const displayRoute = enhancedRoute || route;
+  // Use enhanced route if available, otherwise fallback to straight line or provided complex route
+  const displayRoute = enhancedRoute || ((route && route.length > 2) ? route : null);
 
   if (!center || isNaN(center[0]) || isNaN(center[1])) {
-    console.warn("Map received invalid center:", center);
-    return null; // Don't render map with invalid center
+    return null;
   }
 
   return (
@@ -240,23 +265,30 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
           zoom={zoom}
           style={{ height: "100%", width: "100%", background: '#242424' }}
           scrollWheelZoom={true}
+          zoomControl={false}
         >
           <TileLayer
             attribution='&copy; Google Maps'
             url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
             className="dark-map-tiles"
           />
-          {/* We replace simplified MapUpdater with the smarter RecenterControl */}
+
           <RecenterControl center={center} onRecenter={() => { }} />
+          <RouteBoundsFitter route={displayRoute || undefined} />
 
           {onMapClick && <MapClickHandler onClick={onMapClick} />}
           <MapMarkers markers={markers} />
+
           {displayRoute && displayRoute.length > 0 && (
             <Polyline
               positions={displayRoute}
-              color="#3b82f6"
-              weight={6}
-              opacity={0.9}
+              pathOptions={{
+                color: "#22c55e", // Green-500 as requested for active path
+                weight: 6,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }}
             />
           )}
         </MapContainer>
