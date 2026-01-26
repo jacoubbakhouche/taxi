@@ -44,8 +44,12 @@ const CustomerDashboard = () => {
   const [route, setRoute] = useState<[number, number][]>([]);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [price, setPrice] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(0); // For Hybrid Logic
+  const [isPriceModified, setIsPriceModified] = useState(false); // Robust Hybrid Flag
+  const [pickupAddress, setPickupAddress] = useState(""); // UI State
 
   // --- Driver State ---
   const [driverInfo, setDriverInfo] = useState<any>(null);
@@ -385,6 +389,7 @@ const CustomerDashboard = () => {
     const calcPrice = 100 + (d * 50);
     setPrice(calcPrice); // 100 base + 50 per km
     setEstimatedPrice(calcPrice); // Store original for comparison
+    setIsPriceModified(false); // Reset to Standard Mode
     setRoute([userLocation, destination]);
   };
 
@@ -494,8 +499,8 @@ const CustomerDashboard = () => {
   const handleRequestRide = async () => {
     if (!userId || !destination) return;
 
-    // HYBRID LOGIC: 
-    const isBidding = Math.abs(price - estimatedPrice) > 1;
+    // HYBRID LOGIC: Robust Check
+    const isBidding = isPriceModified;
 
     // 1. Standard Ride Flow: First find a candidate
     if (!isBidding && !candidateDriver) {
@@ -750,6 +755,9 @@ const CustomerDashboard = () => {
         rideStatus === 'pending' && currentRideId && !candidateDriver && (
           <DriverOffersList
             rideId={currentRideId}
+            currentPrice={price}
+            pickupAddress={pickupAddress || "موقعي الحالي"}
+            destinationAddress={searchQuery || "الوجهة"}
             onAcceptOffer={async (offerId) => {
               try {
                 const { error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });
@@ -761,6 +769,10 @@ const CustomerDashboard = () => {
               }
             }}
             onCancelRide={handleCancelRide}
+            onUpdatePrice={async (newPrice) => {
+              setPrice(newPrice);
+              await supabase.from('rides').update({ price: newPrice, customer_offer_price: newPrice }).eq('id', currentRideId);
+            }}
           />
         )
       }
@@ -812,7 +824,18 @@ const CustomerDashboard = () => {
                     {/* BIDDING CONTROLS */}
                     <BiddingControls
                       estimatedPrice={price}
-                      onPriceChange={(newPrice) => setPrice(newPrice)} // We reuse 'price' state as the canonical bid
+                      onPriceChange={(newPrice) => {
+                        setPrice(newPrice);
+                        // Only mark as modified if it actually differs from estimate
+                        // (or just assume user interaction = modification)
+                        if (Math.abs(newPrice - estimatedPrice) > 1) {
+                          setIsPriceModified(true);
+                        } else {
+                          // If user puts it back to original, maybe go back to standard?
+                          // Yes, let's allow going back.
+                          setIsPriceModified(false);
+                        }
+                      }}
                     />
                   </div>
 
