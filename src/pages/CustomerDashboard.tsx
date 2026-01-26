@@ -11,6 +11,8 @@ import RatingDialog from "@/components/RatingDialog";
 import CompleteProfileDialog from "@/components/CompleteProfileDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { BiddingControls } from "@/components/BiddingControls";
+import { DriverOffersList } from "@/components/DriverOffersList";
 import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle } from "lucide-react";
 
 /**
@@ -487,27 +489,22 @@ const CustomerDashboard = () => {
      If we want to start a FRESH search session, we should clear rejected list.
   */
   const handleRequestRide = async () => {
-    // If no candidate, start search (fresh)
-    if (!candidateDriver) {
-      setRejectedDriverIds([]); // Clear history
-      findNearestDriver([]); // Pass empty list
-      return;
-    }
-
-    // ... (rest of logic)
     if (!userId || !destination) return;
 
     try {
+      // Insert with NO driver_id initially (Open Request)
+      // And with customer_offer_price
       const { data, error } = await supabase.from('rides').insert({
         customer_id: userId,
-        driver_id: candidateDriver.id, // Targeting specific driver
+        // driver_id: null, // Open to all
         pickup_lat: userLocation![0],
         pickup_lng: userLocation![1],
         destination_lat: destination[0],
         destination_lng: destination[1],
         pickup_address: await getPlaceName(userLocation![0], userLocation![1]),
         destination_address: searchQuery,
-        price: price,
+        price: price, // Calculated Base Price
+        customer_offer_price: price, // Active Bid Price
         distance: distance,
         duration: duration,
         status: 'pending'
@@ -517,11 +514,9 @@ const CustomerDashboard = () => {
 
       setCurrentRideId(data.id);
       setRideStatus('pending');
-      setCandidateDriver(null); // Clear popup (but keep rejected history? No, reset if success?)
-      // We can reset rejected list once status moves to pending or completed
-      setRejectedDriverIds([]);
+      setCandidateDriver(null);
 
-      toast({ title: "تم الإرسال", description: "جاري انتظار السائق..." });
+      toast({ title: "تم نشر الطلب", description: "بانتظار عروض السائقين..." });
 
     } catch (e) {
       console.error(e);
@@ -728,7 +723,28 @@ const CustomerDashboard = () => {
         </div>
       )}
 
-      {/* ... old bottom sheet ... */}
+      {/* --- Auction / Pending State --- */}
+      {
+        rideStatus === 'pending' && currentRideId && (
+            <DriverOffersList 
+                rideId={currentRideId}
+                onAcceptOffer={async (offerId) => {
+                    try {
+                        const { error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });
+                        if (error) throw error;
+                        setRideStatus('accepted');
+                         // Driver info will update via realtime subscription or we can force fetch
+                         toast({ title: "تم قبول العرض! 🎉", description: "السائق قادم إليك" });
+                    } catch (e) {
+                         toast({ title: "فشل قبول العرض", variant: "destructive" });
+                    }
+                }}
+                onCancelRide={handleCancelRide}
+            />
+        )
+      }
+
+      {/* --- Pre-Order Sheet (Bidding) --- */}
       {
         rideStatus === 'idle' && !candidateDriver && (
           <div className="fixed bottom-0 left-0 right-0 z-[1000] p-6 pb-8 bg-[#1A1A1A] text-white rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.7)] border-t border-white/5 transition-all duration-300 animate-in slide-in-from-bottom-10">
@@ -753,14 +769,15 @@ const CustomerDashboard = () => {
             ) : (
               <div className="space-y-6">
                 <div className="flex justify-between items-center text-right" dir="rtl">
-                  <div>
-                    <h3 className="font-bold text-3xl mb-1">{Math.round(price)} دج</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <span className="bg-white/10 px-2 py-0.5 rounded textxs">CASH</span>
-                      <span>{distance.toFixed(1)} km • {duration.toFixed(0)} min</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
+                   <div className="flex-1 pl-4">
+                     {/* BIDDING CONTROLS */}
+                      <BiddingControls 
+                        estimatedPrice={price} 
+                        onPriceChange={(newPrice) => setPrice(newPrice)} // We reuse 'price' state as the canonical bid
+                     />
+                   </div>
+                   
+                  <Button variant="ghost" size="sm" className="text-[#84cc16] hover:text-[#84cc16]/80 hover:bg-white/5 shrink-0" onClick={() => { setDestination(null); setRoute([]); setSearchQuery(""); }}>
                     تغيير الوجهة
                   </Button>
                 </div>
@@ -772,11 +789,16 @@ const CustomerDashboard = () => {
                   <div className="text-right flex-1">
                     <p className="text-xs text-gray-500">الوجهة</p>
                     <p className="font-bold text-sm truncate">{searchQuery}</p>
+                    <div className="flex text-xs text-gray-400 gap-2 mt-1">
+                         <span>{distance.toFixed(1)} كم</span>
+                         <span>•</span>
+                         <span>{duration.toFixed(0)} دقيقة</span>
+                    </div>
                   </div>
                 </div>
 
                 <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-[#84cc16]/10" onClick={handleRequestRide}>
-                  {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : "بحث عن سائق 🚖"}
+                  {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : `بحث عن سائق (${price} دج)`}
                 </Button>
               </div>
             )}
@@ -784,23 +806,20 @@ const CustomerDashboard = () => {
         )
       }
 
-      {/* --- Candidate Driver Popup --- */}
+      {/* --- Candidate Driver Popup (Legacy Flow / Or if matched by system) --- */}
+      {/* Keeping this as fallback or if instant matchmaking is preferred alongside bidding later */}
 
+      {/* --- Pending State (Radar Effect) - REPLACED BY DriverOffersList above if pure bidding --- */}
+      {/* But let's keep the radar effect BEHIND the list maybe? Or just hide it. The list acts as the view. */}
+      {/* We removing the duplicate pending view block to avoid overlap */}
 
-      {/* --- Pending State --- */}
-      {/* --- Pending State (Radar Effect) --- */}
-      {
-        rideStatus === 'pending' && (
-          <div className="absolute inset-0 z-[2000] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-10 animate-in fade-in duration-500">
-
-            {/* Radar Animation */}
-            <div className="relative flex items-center justify-center">
-              {/* Pulsing Circles */}
-              <div className="absolute w-64 h-64 bg-[#84cc16]/20 rounded-full animate-ping opacity-20 duration-[3s]"></div>
-              <div className="absolute w-48 h-48 bg-[#84cc16]/10 rounded-full animate-pulse delay-700"></div>
-              <div className="absolute w-32 h-32 border border-[#84cc16]/30 rounded-full"></div>
-
-              {/* Center Icon */}
+      {/* --- Radar Animation Layer (Optional Background for Pending) --- */}
+       {
+        rideStatus === 'pending' && !candidateDriver && (
+           // Minimal loader or nothing. The DriverOffersList covers the screen.
+           null
+        )
+       }
               <div className="w-20 h-20 bg-[#1A1A1A] border-2 border-[#84cc16] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(132,204,22,0.4)] z-10 relative">
                 <Loader2 className="w-10 h-10 text-[#84cc16] animate-spin" />
                 <div className="absolute inset-0 rounded-full border border-[#84cc16] animate-ping opacity-20"></div>
@@ -824,23 +843,23 @@ const CustomerDashboard = () => {
                 سيتم نقلك تلقائياً عند قبول الطلب
               </p>
             </div>
-          </div>
+          </div >
         )
       }
 
-      {/* --- Active Ride (Accepted/In Progress) --- */}
-      {
-        (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
-          <DriverInfoCard
-            driver={driverInfo}
-            rideStatus={rideStatus}
-            onCancel={handleCancelRide}
-            onEndRide={handleEndRide}
-          />
-        )
-      }
+{/* --- Active Ride (Accepted/In Progress) --- */ }
+{
+  (rideStatus === 'accepted' || rideStatus === 'in_progress') && driverInfo && (
+    <DriverInfoCard
+      driver={driverInfo}
+      rideStatus={rideStatus}
+      onCancel={handleCancelRide}
+      onEndRide={handleEndRide}
+    />
+  )
+}
 
-      {/* --- Rating Dialog --- */}
+{/* --- Rating Dialog --- */ }
       <RatingDialog
         open={showRating}
         onOpenChange={setShowRating}

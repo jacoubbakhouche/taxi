@@ -10,7 +10,8 @@ import RideRequestMap from "@/components/RideRequestMap";
 import RideRequestCard from "@/components/RideRequestCard";
 import ActiveRideCard from "@/components/ActiveRideCard";
 import RatingDialog from "@/components/RatingDialog";
-import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck, Menu, History, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
@@ -630,545 +631,554 @@ const DriverDashboard = () => {
         description: error.message || "حدث خطأ أثناء قبول الرحلة",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+      /*
+         UPDATED FOR BIDDING SYSTEM:
+         Drivers now SEND OFFERS instead of instantly accepting.
+      */
+      const handleSendOffer = async (price: number) => {
+        if (!pendingRide || !userId) return;
 
-  const handleAcceptRide = async (price: number) => {
-    if (!pendingRide || !userId) return;
+        try {
+          setLoading(true);
 
-    try {
-      setLoading(true);
+          // Insert Offer
+          const { error } = await supabase.from('ride_offers').insert({
+            ride_id: pendingRide.id,
+            driver_id: userId,
+            amount: price,
+            status: 'pending'
+          });
 
-      // Direct updates to rides table (Simplification)
-      const { error } = await supabase
-        .from('rides')
-        .update({
-          status: 'accepted',
-          driver_id: userId,
-          final_price: price
-        })
-        .eq('id', pendingRide.id);
+          if (error) throw error;
 
-      if (error) throw error;
+          toast({
+            title: "تم إرسال العرض! 📤",
+            description: `بانتظار موافقة العميل على ${price} دج`,
+          });
 
-      // Update local state
-      setCurrentRide({
-        ...pendingRide,
-        status: 'accepted',
-        driver_id: userId,
-        final_price: price
-      });
+          // Hide this request locally as "Responded"
+          setIgnoredRideIds(prev => [...prev, pendingRide.id]);
+          setPendingRide(null);
+          setIsSheetExpanded(false);
 
-      // Set locations for the map to render
-      setCustomerLocation([pendingRide.pickup_lat, pendingRide.pickup_lng]);
-      setDestinationLocation([pendingRide.destination_lat, pendingRide.destination_lng]);
+        } catch (error: any) {
+          console.error('Error sending offer:', error);
+          toast({
+            title: "خطأ",
+            description: "فشل إرسال العرض",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
 
-      // Do NOT clear customerInfo - we need it for the accepted ride UI!
-      // setCustomerInfo(null); 
+      const handleRejectRide = async () => {
+        if (!pendingRide) return;
 
-      setPendingRide(null);
-      setIsSheetExpanded(false);
+        // Local ignore only - do NOT delete from DB so other drivers can see it
+        setIgnoredRideIds(prev => [...prev, pendingRide.id]);
 
-      toast({
-        title: "تم قبول الرحلة! ✅",
-        description: "توجه إلى موقع العميل",
-      });
-    } catch (error: any) {
-      console.error('Error accepting ride:', error);
-      toast({
-        title: "خطأ",
-        description: error.message || "حدث خطأ أثناء قبول الرحلة",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+        setPendingRide(null);
+        setCustomerInfo(null);
+        setIsSheetExpanded(false);
 
+        toast({ title: "تم تجاهل الطلب" });
+      };
 
+      const handleCustomerClick = () => {
+        if (customerInfo) {
+          navigate(`/driver/customer/${customerInfo.id}`);
+        }
+      };
 
-  const handleRejectRide = async () => {
-    if (!pendingRide) return;
+      const [showRating, setShowRating] = useState(false);
 
-    // Local ignore only - do NOT delete from DB so other drivers can see it
-    setIgnoredRideIds(prev => [...prev, pendingRide.id]);
+      const handleCompleteRide = async () => {
+        if (!currentRide) return;
 
-    setPendingRide(null);
-    setCustomerInfo(null);
-    setIsSheetExpanded(false);
+        try {
+          setLoading(true);
 
-    toast({
-      title: "تم تجاهل الطلب",
-      description: "لن يظهر لك هذا الطلب مرة أخرى",
-    });
-  };
+          const { error } = await supabase
+            .from('rides')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', currentRide.id);
 
-  const handleCustomerClick = () => {
-    if (customerInfo) {
-      navigate(`/driver/customer/${customerInfo.id}`);
-    }
-  };
+          if (error) throw error;
 
-  const [showRating, setShowRating] = useState(false);
+          localStorage.removeItem('activeRideId');
 
-  const handleCompleteRide = async () => {
-    if (!currentRide) return;
+          toast({
+            title: "تمت الرحلة بنجاح! 🎉",
+            description: "يرجى تقييم العميل",
+          });
 
-    try {
-      setLoading(true);
+          // Delay cleaning content to show rating
+          setShowRating(true);
 
-      const { error } = await supabase
-        .from('rides')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', currentRide.id);
+        } catch (error) {
+          console.error('Error completing ride:', error);
+          toast({
+            title: "خطأ",
+            description: "لم نتمكن من إنهاء الرحلة",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
 
-      if (error) throw error;
+      const handleRatingSubmit = async (rating: number) => {
+        if (!currentRide || !customerInfo) return;
 
-      localStorage.removeItem('activeRideId');
+        try {
+          // 1. Insert review
+          await supabase.from('reviews').insert({
+            ride_id: currentRide.id,
+            reviewer_id: userId,
+            reviewee_id: currentRide.customer_id,
+            rating: rating,
+            comment: "Rated by driver"
+          });
 
-      toast({
-        title: "تمت الرحلة بنجاح! 🎉",
-        description: "يرجى تقييم العميل",
-      });
+          // 2. Update user aggregate rating
+          const newRating = ((customerInfo.rating * customerInfo.total_rides) + rating) / (customerInfo.total_rides + 1);
 
-      // Delay cleaning content to show rating
-      setShowRating(true);
+          await supabase.from('users').update({
+            rating: newRating,
+            total_rides: customerInfo.total_rides + 1
+          }).eq('id', customerInfo.id);
 
-    } catch (error) {
-      console.error('Error completing ride:', error);
-      toast({
-        title: "خطأ",
-        description: "لم نتمكن من إنهاء الرحلة",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+          toast({
+            title: "تم إرسال التقييم",
+            description: "شكراً لك!",
+          });
 
-  const handleRatingSubmit = async (rating: number) => {
-    if (!currentRide || !customerInfo) return;
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setShowRating(false);
+          setCurrentRide(null);
+          setCustomerLocation(null);
+          setDestinationLocation(null);
+          setCustomerInfo(null);
+        }
+      };
 
-    try {
-      // 1. Insert review
-      await supabase.from('reviews').insert({
-        ride_id: currentRide.id,
-        reviewer_id: userId,
-        reviewee_id: currentRide.customer_id,
-        rating: rating,
-        comment: "Rated by driver"
-      });
+      const getMarkers = () => {
+        const markers: Array<{ position: [number, number]; popup?: string; icon?: string }> = [];
 
-      // 2. Update user aggregate rating
-      const newRating = ((customerInfo.rating * customerInfo.total_rides) + rating) / (customerInfo.total_rides + 1);
-
-      await supabase.from('users').update({
-        rating: newRating,
-        total_rides: customerInfo.total_rides + 1
-      }).eq('id', customerInfo.id);
-
-      toast({
-        title: "تم إرسال التقييم",
-        description: "شكراً لك!",
-      });
-
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setShowRating(false);
-      setCurrentRide(null);
-      setCustomerLocation(null);
-      setDestinationLocation(null);
-      setCustomerInfo(null);
-    }
-  };
-
-  const getMarkers = () => {
-    const markers: Array<{ position: [number, number]; popup?: string; icon?: string }> = [];
-
-    markers.push({
-      position: driverLocation,
-      popup: "موقعي الحالي",
-      icon: "🚗"
-    });
-
-    // Pending Ride Markers
-    if (pendingRide) {
-      markers.push({
-        position: [pendingRide.pickup_lat, pendingRide.pickup_lng],
-        popup: "موقع العميل (Pickup) 📍",
-        icon: "🧍"
-      });
-      markers.push({
-        position: [pendingRide.destination_lat, pendingRide.destination_lng],
-        popup: "الوجهة (Dropoff) 🎯",
-        icon: "pin"
-      });
-    }
-
-    if (customerLocation && currentRide?.status === 'accepted') {
-      markers.push({
-        position: customerLocation,
-        popup: "موقع العميل 📍",
-        icon: "🧍"
-      });
-      // Show destination marker in accepted state too
-      if (destinationLocation) {
         markers.push({
-          position: destinationLocation,
-          popup: "الوجهة (Dropoff) 🎯",
-          icon: "pin"
+          position: driverLocation,
+          popup: "موقعي الحالي",
+          icon: "🚗"
         });
-      }
-    }
 
-    if (currentRide?.status === 'in_progress') {
-      if (customerLocation) {
-        markers.push({
-          position: customerLocation,
-          popup: "نقطة الانطلاق 📍",
-          icon: "🧍"
-        });
-      }
-      if (destinationLocation) {
-        markers.push({
-          position: destinationLocation,
-          popup: "الوجهة 🎯",
-          icon: "📍"
-        });
-      }
-    }
+        // Pending Ride Markers
+        if (pendingRide) {
+          markers.push({
+            position: [pendingRide.pickup_lat, pendingRide.pickup_lng],
+            popup: "موقع العميل (Pickup) 📍",
+            icon: "🧍"
+          });
+          markers.push({
+            position: [pendingRide.destination_lat, pendingRide.destination_lng],
+            popup: "الوجهة (Dropoff) 🎯",
+            icon: "pin"
+          });
+        }
 
-    return markers;
-  };
+        if (customerLocation && currentRide?.status === 'accepted') {
+          markers.push({
+            position: customerLocation,
+            popup: "موقع العميل 📍",
+            icon: "🧍"
+          });
+          // Show destination marker in accepted state too
+          if (destinationLocation) {
+            markers.push({
+              position: destinationLocation,
+              popup: "الوجهة (Dropoff) 🎯",
+              icon: "pin"
+            });
+          }
+        }
 
-  const getRoute = (): [number, number][] | undefined => {
-    if (pendingRide) {
-      // Driver -> Pickup -> Destination
-      return [
-        driverLocation,
-        [pendingRide.pickup_lat, pendingRide.pickup_lng] as [number, number],
-        [pendingRide.destination_lat, pendingRide.destination_lng] as [number, number]
-      ];
-    }
+        if (currentRide?.status === 'in_progress') {
+          if (customerLocation) {
+            markers.push({
+              position: customerLocation,
+              popup: "نقطة الانطلاق 📍",
+              icon: "🧍"
+            });
+          }
+          if (destinationLocation) {
+            markers.push({
+              position: destinationLocation,
+              popup: "الوجهة 🎯",
+              icon: "📍"
+            });
+          }
+        }
 
-    if (!currentRide) return undefined;
+        return markers;
+      };
 
-    if (currentRide.status === 'accepted' && customerLocation) {
-      // Driver -> Pickup -> Destination
-      if (destinationLocation) {
-        return [driverLocation, customerLocation, destinationLocation];
-      }
-      return [driverLocation, customerLocation];
-    }
+      const getRoute = (): [number, number][] | undefined => {
+        if (pendingRide) {
+          // Driver -> Pickup -> Destination
+          return [
+            driverLocation,
+            [pendingRide.pickup_lat, pendingRide.pickup_lng] as [number, number],
+            [pendingRide.destination_lat, pendingRide.destination_lng] as [number, number]
+          ];
+        }
 
-    if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
-      return [driverLocation, destinationLocation];
-    }
+        if (!currentRide) return undefined;
 
-    return undefined;
-  };
+        if (currentRide.status === 'accepted' && customerLocation) {
+          // Driver -> Pickup -> Destination
+          if (destinationLocation) {
+            return [driverLocation, customerLocation, destinationLocation];
+          }
+          return [driverLocation, customerLocation];
+        }
 
-  // 0. BLOCKER: SUBSCRIPTION EXPIRED / ACCOUNT SUSPENDED
-  if (isSubscriptionExpired) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-8 space-y-8 font-sans animate-in fade-in">
-        <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center animate-pulse">
-          <Clock className="w-12 h-12 text-red-500" />
-        </div>
+        if (currentRide.status === 'in_progress' && customerLocation && destinationLocation) {
+          return [driverLocation, destinationLocation];
+        }
 
-        <div className="text-center space-y-4 max-w-sm">
-          <h1 className="text-3xl font-bold text-red-500">تنبيه حساب</h1>
-          <p className="text-gray-400 text-lg leading-relaxed">
-            حسابك معلق حالياً أو انتهى اشتراكك.
-            <br />
-            يرجى التواصل مع الإدارة لتسوية الوضعية.
-          </p>
-        </div>
+        return undefined;
+      };
 
-        <div className="w-full max-w-xs space-y-3">
-          <Button
-            className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-lime-500/20"
-            onClick={() => window.open('tel:0555555555')}
-          >
-            <Phone className="w-5 h-5 mr-3" />
-            اتصل بالإدارة
-          </Button>
-
-          <Button variant="ghost" onClick={handleLogout} className="w-full text-gray-500 hover:text-white">
-            تسجيل الخروج
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isVerified) {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 space-y-6 font-sans">
-        <div className="w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center animate-pulse">
-          <ShieldCheck className="w-10 h-10 text-yellow-400" />
-        </div>
-
-        <div className="text-center space-y-2 max-w-md">
-          <h1 className="text-2xl font-bold">Verification Required</h1>
-          <p className="text-gray-400">
-            {documentsSubmitted
-              ? "Your documents have been received and are under review. Please wait for admin approval."
-              : "To start driving, please upload your driving license and registration card."}
-          </p>
-        </div>
-
-        {documentsSubmitted ? (
-          <div className="bg-[#1A1A1A] p-6 rounded-xl border border-white/10 w-full max-w-sm text-center shadow-2xl">
-            <Clock className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-            <h3 className="font-bold text-lg mb-2">Under Review</h3>
-            <p className="text-sm text-gray-500 mb-6">This usually takes 1-24 hours</p>
-            <Button variant="outline" className="w-full border-[#333] hover:bg-[#222] text-white" onClick={() => window.location.reload()}>
-              Check Status
-            </Button>
-            <Button variant="ghost" onClick={handleLogout} className="w-full mt-2 text-xs text-gray-600 hover:text-red-500">
-              Logout
-            </Button>
-          </div>
-        ) : (
-          <div className="w-full max-w-sm space-y-4 bg-[#1A1A1A] p-6 rounded-xl border border-white/10 shadow-2xl">
-            {/* Driving License Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Driving License (Permis)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  id="license-upload"
-                  onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
-                />
-                <label
-                  htmlFor="license-upload"
-                  className={cn(
-                    "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
-                    licenseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
-                  )}
-                >
-                  {licenseFile ? (
-                    <div className="text-center">
-                      <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
-                      <span className="text-xs text-[#84cc16] font-bold">{licenseFile.name}</span>
-                    </div>
-                  ) : (
-                    <div className="text-center text-gray-500">
-                      <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
-                      <span className="text-xs font-medium">Tap to upload License</span>
-                    </div>
-                  )}
-                </label>
-              </div>
+      // 0. BLOCKER: SUBSCRIPTION EXPIRED / ACCOUNT SUSPENDED
+      if (isSubscriptionExpired) {
+        return (
+          <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-8 space-y-8 font-sans animate-in fade-in">
+            <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center animate-pulse">
+              <Clock className="w-12 h-12 text-red-500" />
             </div>
 
-            {/* Carte Grise Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Vehicle Registration (Carte Grise)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  id="cg-upload"
-                  onChange={(e) => setCarteGriseFile(e.target.files?.[0] || null)}
-                />
-                <label
-                  htmlFor="cg-upload"
-                  className={cn(
-                    "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
-                    carteGriseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
-                  )}
-                >
-                  {carteGriseFile ? (
-                    <div className="text-center">
-                      <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
-                      <span className="text-xs text-[#84cc16] font-bold">{carteGriseFile.name}</span>
-                    </div>
-                  ) : (
-                    <div className="text-center text-gray-500">
-                      <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
-                      <span className="text-xs font-medium">Tap to upload Card</span>
-                    </div>
-                  )}
-                </label>
-              </div>
+            <div className="text-center space-y-4 max-w-sm">
+              <h1 className="text-3xl font-bold text-red-500">تنبيه حساب</h1>
+              <p className="text-gray-400 text-lg leading-relaxed">
+                حسابك معلق حالياً أو انتهى اشتراكك.
+                <br />
+                يرجى التواصل مع الإدارة لتسوية الوضعية.
+              </p>
             </div>
 
-            <Button
-              className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 text-lg shadow-lg shadow-lime-500/20 mt-2"
-              onClick={handleUploadDocuments}
-              disabled={uploadingFiles}
-            >
-              {uploadingFiles ? <Loader2 className="animate-spin mr-2" /> : "Submit Documents"}
-            </Button>
+            <div className="w-full max-w-xs space-y-3">
+              <Button
+                className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-lime-500/20"
+                onClick={() => window.open('tel:0555555555')}
+              >
+                <Phone className="w-5 h-5 mr-3" />
+                اتصل بالإدارة
+              </Button>
 
-            <Button variant="ghost" onClick={handleLogout} className="w-full text-xs text-gray-600 hover:text-red-500">
-              Logout
-            </Button>
+              <Button variant="ghost" onClick={handleLogout} className="w-full text-gray-500 hover:text-white">
+                تسجيل الخروج
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
-    );
-  }
+        );
+      }
 
-  return (
-    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      {/* --- Professional Header (Same as Customer) --- */}
-      <header className="absolute top-0 left-0 right-0 z-[3000] p-4 flex justify-between items-start">
-        {/* Logo/Status Box */}
-        <div className="bg-card/90 backdrop-blur border border-border rounded-full p-2 pr-4 pl-2 flex items-center gap-3 shadow-lg">
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-            isOnline ? "bg-green-500" : "bg-red-500"
-          )}>
-            <Car className="text-black w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="font-bold text-sm">Taxi DZ</h1>
-            <p className="text-[10px] text-muted-foreground font-medium">
-              {isOnline ? "You are Online" : "You are Offline"}
-            </p>
-          </div>
-        </div>
+      if (!isVerified) {
+        return (
+          <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 space-y-6 font-sans">
+            <div className="w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center animate-pulse">
+              <ShieldCheck className="w-10 h-10 text-yellow-400" />
+            </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          {/* Online Toggle */}
-          <Button
-            size="icon"
-            onClick={toggleOnline}
-            className={cn(
-              "rounded-full w-10 h-10 transition-all duration-300 shadow-lg border border-white/10 backdrop-blur-md",
-              isOnline
-                ? "bg-black/60 text-[#84cc16] hover:bg-black/70 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
-                : "bg-black/60 text-red-500 hover:bg-black/70"
+            <div className="text-center space-y-2 max-w-md">
+              <h1 className="text-2xl font-bold">Verification Required</h1>
+              <p className="text-gray-400">
+                {documentsSubmitted
+                  ? "Your documents have been received and are under review. Please wait for admin approval."
+                  : "To start driving, please upload your driving license and registration card."}
+              </p>
+            </div>
+
+            {documentsSubmitted ? (
+              <div className="bg-[#1A1A1A] p-6 rounded-xl border border-white/10 w-full max-w-sm text-center shadow-2xl">
+                <Clock className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+                <h3 className="font-bold text-lg mb-2">Under Review</h3>
+                <p className="text-sm text-gray-500 mb-6">This usually takes 1-24 hours</p>
+                <Button variant="outline" className="w-full border-[#333] hover:bg-[#222] text-white" onClick={() => window.location.reload()}>
+                  Check Status
+                </Button>
+                <Button variant="ghost" onClick={handleLogout} className="w-full mt-2 text-xs text-gray-600 hover:text-red-500">
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <div className="w-full max-w-sm space-y-4 bg-[#1A1A1A] p-6 rounded-xl border border-white/10 shadow-2xl">
+                {/* Driving License Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">Driving License (Permis)</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="license-upload"
+                      onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+                    />
+                    <label
+                      htmlFor="license-upload"
+                      className={cn(
+                        "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
+                        licenseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
+                      )}
+                    >
+                      {licenseFile ? (
+                        <div className="text-center">
+                          <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
+                          <span className="text-xs text-[#84cc16] font-bold">{licenseFile.name}</span>
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-500">
+                          <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
+                          <span className="text-xs font-medium">Tap to upload License</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Carte Grise Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">Vehicle Registration (Carte Grise)</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="cg-upload"
+                      onChange={(e) => setCarteGriseFile(e.target.files?.[0] || null)}
+                    />
+                    <label
+                      htmlFor="cg-upload"
+                      className={cn(
+                        "flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors backdrop-blur-sm",
+                        carteGriseFile ? "border-[#84cc16] bg-[#84cc16]/10" : "border-gray-700 hover:border-gray-500 hover:bg-gray-800"
+                      )}
+                    >
+                      {carteGriseFile ? (
+                        <div className="text-center">
+                          <CheckCircle className="w-8 h-8 text-[#84cc16] mx-auto mb-2" />
+                          <span className="text-xs text-[#84cc16] font-bold">{carteGriseFile.name}</span>
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-500">
+                          <div className="w-10 h-10 border border-current rounded-lg mx-auto mb-2 flex items-center justify-center text-[10px] opacity-50">IMG</div>
+                          <span className="text-xs font-medium">Tap to upload Card</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 text-lg shadow-lg shadow-lime-500/20 mt-2"
+                  onClick={handleUploadDocuments}
+                  disabled={uploadingFiles}
+                >
+                  {uploadingFiles ? <Loader2 className="animate-spin mr-2" /> : "Submit Documents"}
+                </Button>
+
+                <Button variant="ghost" onClick={handleLogout} className="w-full text-xs text-gray-600 hover:text-red-500">
+                  Logout
+                </Button>
+              </div>
             )}
-          >
-            <Power className="w-5 h-5 fill-current" />
-          </Button>
-
-          {/* Profile */}
-          <Button
-            size="icon"
-            onClick={() => navigate('/driver/profile')}
-            className="rounded-full w-10 h-10 bg-black/60 backdrop-blur-md border border-white/10 text-white hover:bg-black/70 shadow-lg"
-          >
-            <User className="w-5 h-5" />
-          </Button>
-
-          {/* Logout */}
-          <Button
-            size="icon"
-            onClick={handleLogout}
-            className="rounded-full w-10 h-10 bg-black/60 backdrop-blur-md border border-white/10 text-red-500 hover:bg-black/70 shadow-lg hover:text-red-400"
-          >
-            <LogOut className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
-
-      {/* --- Map Layer --- */}
-      {/* --- Map Layer --- */}
-      <div className="absolute inset-0 z-0">
-        {pendingRide ? (
-          <RideRequestMap
-            driverLocation={driverLocation}
-            pickupLocation={[pendingRide.pickup_lat, pendingRide.pickup_lng]}
-            dropoffLocation={[pendingRide.destination_lat, pendingRide.destination_lng]}
-          />
-        ) : (
-          <Map
-            center={driverLocation || [36.7538, 3.0588]}
-            recenterKey={locationKey}
-            markers={[
-              ...(driverLocation ? [{
-                position: driverLocation,
-                popup: "موقعي الحالي",
-                icon: "🚗",
-                rotation: driverHeading
-              }] : []),
-              ...(customerLocation && currentRide?.status === 'accepted' ? [
-                { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
-                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
-              ] as any[] : []),
-              ...(currentRide?.status === 'in_progress' ? [
-                ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
-                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
-              ] as any[] : [])
-            ]}
-            route={
-              currentRide && driverLocation
-                ? [
-                  driverLocation,
-                  currentRide.status === 'accepted'
-                    ? [currentRide.pickup_lat, currentRide.pickup_lng]
-                    : [currentRide.destination_lat, currentRide.destination_lng]
-                ]
-                : undefined
-            }
-          />
-        )}
-      </div>
-
-      {/* --- Overlay: Offline State --- */}
-      {!isOnline && (
-        <div className="absolute inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-          <div className="bg-[#1A1A1A] p-8 rounded-3xl border border-white/10 text-center space-y-4 shadow-2xl">
-            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Power className="w-10 h-10 text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold">You are Offline</h2>
-            <p className="text-gray-400 max-w-xs">You are not receiving ride requests. Go online to start working.</p>
-            <Button size="lg" className="w-full bg-green-500 hover:bg-green-600 text-black font-bold rounded-xl" onClick={toggleOnline}>
-              GO ONLINE
-            </Button>
           </div>
+        );
+      }
+
+      return (
+        <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+          {/* --- Professional Header (Same as Customer) --- */}
+          <header className="absolute top-0 left-0 right-0 z-[3000] p-4 flex justify-between items-start">
+            {/* Logo/Status Box */}
+            <div className="bg-card/90 backdrop-blur border border-border rounded-full p-2 pr-4 pl-2 flex items-center gap-3 shadow-lg">
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                isOnline ? "bg-green-500" : "bg-red-500"
+              )}>
+                <Car className="text-black w-4 h-4" />
+              </div>
+              <div>
+                <h1 className="font-bold text-sm">Taxi DZ</h1>
+                <p className="text-[10px] text-muted-foreground font-medium">
+                  {isOnline ? "You are Online" : "You are Offline"}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            {/* Actions */}
+            <div className="flex gap-2">
+              {/* Online Toggle (Kept outside for quick access) */}
+              <Button
+                size="icon"
+                onClick={toggleOnline}
+                className={cn(
+                  "rounded-full w-12 h-12 transition-all duration-300 shadow-lg border border-white/10 backdrop-blur-md mr-2",
+                  isOnline
+                    ? "bg-black/60 text-[#84cc16] hover:bg-black/70 shadow-[0_0_15px_rgba(132,204,22,0.3)]"
+                    : "bg-black/60 text-red-500 hover:bg-black/70"
+                )}
+              >
+                <Power className="w-6 h-6 fill-current" />
+              </Button>
+
+              {/* Sidebar Menu */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button size="icon" variant="secondary" className="rounded-full shadow-lg h-12 w-12 bg-[#1A1A1A] text-white border border-white/10 hover:bg-white/10">
+                    <Menu className="w-6 h-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="bg-[#1A1A1A] border-l border-white/10 text-white w-[300px] sm:w-[400px]">
+                  <SheetHeader className="mb-8 text-right">
+                    <SheetTitle className="text-2xl font-bold text-white mb-2">القائمة</SheetTitle>
+                    <div className="h-1 w-20 bg-[#84cc16] rounded-full ml-auto"></div>
+                  </SheetHeader>
+
+                  <div className="flex flex-col gap-4">
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-4 h-14 text-lg hover:bg-white/5 hover:text-[#84cc16] transition-colors"
+                      onClick={() => navigate("/driver/profile")}
+                    >
+                      <UserCircle className="w-6 h-6" />
+                      الملف الشخصي
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-4 h-14 text-lg hover:bg-white/5 hover:text-[#84cc16] transition-colors"
+                      onClick={() => toast({ title: "قريباً", description: "سجل الرحلات يعمل عليه المطورون" })}
+                    >
+                      <History className="w-6 h-6" />
+                      سجل الرحلات
+                    </Button>
+
+                    <div className="h-px bg-white/10 my-4"></div>
+
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-4 h-14 text-lg text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-6 h-6" />
+                      تسجيل الخروج
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </header>
+
+          {/* --- Map Layer --- */}
+          {/* --- Map Layer --- */}
+          <div className="absolute inset-0 z-0">
+            {pendingRide ? (
+              <RideRequestMap
+                driverLocation={driverLocation}
+                pickupLocation={[pendingRide.pickup_lat, pendingRide.pickup_lng]}
+                dropoffLocation={[pendingRide.destination_lat, pendingRide.destination_lng]}
+              />
+            ) : (
+              <Map
+                center={driverLocation || [36.7538, 3.0588]}
+                recenterKey={locationKey}
+                markers={[
+                  ...(driverLocation ? [{
+                    position: driverLocation,
+                    popup: "موقعي الحالي",
+                    icon: "🚗",
+                    rotation: driverHeading
+                  }] : []),
+                  ...(customerLocation && currentRide?.status === 'accepted' ? [
+                    { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
+                    ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
+                  ] as any[] : []),
+                  ...(currentRide?.status === 'in_progress' ? [
+                    ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
+                    ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
+                  ] as any[] : [])
+                ]}
+                route={
+                  currentRide && driverLocation
+                    ? [
+                      driverLocation,
+                      currentRide.status === 'accepted'
+                        ? [currentRide.pickup_lat, currentRide.pickup_lng]
+                        : [currentRide.destination_lat, currentRide.destination_lng]
+                    ]
+                    : undefined
+                }
+              />
+            )}
+          </div>
+
+          {/* --- Overlay: Offline State --- */}
+          {!isOnline && (
+            <div className="absolute inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+              <div className="bg-[#1A1A1A] p-8 rounded-3xl border border-white/10 text-center space-y-4 shadow-2xl">
+                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Power className="w-10 h-10 text-red-500" />
+                </div>
+                <h2 className="text-2xl font-bold">You are Offline</h2>
+                <p className="text-gray-400 max-w-xs">You are not receiving ride requests. Go online to start working.</p>
+                <Button size="lg" className="w-full bg-green-500 hover:bg-green-600 text-black font-bold rounded-xl" onClick={toggleOnline}>
+                  GO ONLINE
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* --- Ride Request Card (Pending) --- */}
+          {pendingRide && (
+            <RideRequestCard
+              ride={pendingRide}
+              customer={customerInfo}
+              onAccept={handleSendOffer}
+              onReject={handleRejectRide}
+            />
+          )}
+
+          {/* --- Active Ride Info (Accepted/In Progress) --- */}
+          {/* --- Active Ride Info (Accepted/In Progress) --- */}
+          {/* --- Active Ride Info (Accepted/In Progress) --- */}
+          {currentRide && !showRating && (
+            <ActiveRideCard
+              currentRide={currentRide}
+              customerInfo={customerInfo}
+              driverLocation={driverLocation}
+              onCompleteRide={handleCompleteRide}
+              onCallCustomer={() => window.location.href = `tel:${customerInfo?.phone}`}
+            />
+          )}
+
+          {/* Rating Dialog */}
+          <RatingDialog
+            open={showRating}
+            onOpenChange={setShowRating}
+            onSubmit={handleRatingSubmit}
+            name={customerInfo?.full_name || "العميل"}
+            role="customer"
+          />
         </div>
-      )}
+      );
+    };
 
-      {/* --- Ride Request Card (Pending) --- */}
-      {pendingRide && (
-        <RideRequestCard
-          ride={pendingRide}
-          customer={customerInfo}
-          onAccept={handleAcceptRide}
-          onReject={handleRejectRide}
-        />
-      )}
-
-      {/* --- Active Ride Info (Accepted/In Progress) --- */}
-      {/* --- Active Ride Info (Accepted/In Progress) --- */}
-      {/* --- Active Ride Info (Accepted/In Progress) --- */}
-      {currentRide && !showRating && (
-        <ActiveRideCard
-          currentRide={currentRide}
-          customerInfo={customerInfo}
-          driverLocation={driverLocation}
-          onCompleteRide={handleCompleteRide}
-          onCallCustomer={() => window.location.href = `tel:${customerInfo?.phone}`}
-        />
-      )}
-
-      {/* Rating Dialog */}
-      <RatingDialog
-        open={showRating}
-        onOpenChange={setShowRating}
-        onSubmit={handleRatingSubmit}
-        name={customerInfo?.full_name || "العميل"}
-        role="customer"
-      />
-    </div>
-  );
-};
-
-export default DriverDashboard;
+    export default DriverDashboard;
