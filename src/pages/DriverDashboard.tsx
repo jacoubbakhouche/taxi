@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
+import RideRequestMap from "@/components/RideRequestMap";
 import RideRequestCard from "@/components/RideRequestCard";
 import RatingDialog from "@/components/RatingDialog";
 import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck } from "lucide-react";
@@ -1076,39 +1077,36 @@ const DriverDashboard = () => {
       </header>
 
       {/* --- Map Layer --- */}
+      {/* --- Map Layer --- */}
       <div className="absolute inset-0 z-0">
-        <Map
-          center={driverLocation || [36.7538, 3.0588]} // Default to Algiers if waiting for GPS
-          recenterKey={locationKey}
-          markers={[
-            ...(driverLocation ? [{
-              position: driverLocation,
-              popup: "موقعي الحالي",
-              icon: "🚗",
-              rotation: driverHeading
-            }] : []),
-            ...(pendingRide ? [
-              { position: [pendingRide.pickup_lat, pendingRide.pickup_lng], popup: "موقع العميل (Pickup) 📍", icon: "🧍" },
-              { position: [pendingRide.destination_lat, pendingRide.destination_lng], popup: "الوجهة (Dropoff) 🎯", icon: "pin" }
-            ] as any[] : []),
-            ...(customerLocation && currentRide?.status === 'accepted' ? [
-              { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
-              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
-            ] as any[] : []),
-            ...(currentRide?.status === 'in_progress' ? [
-              ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
-              ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
-            ] as any[] : [])
-          ]}
-          // If we have a destination (active ride), show route
-          route={
-            customerLocation && destinationLocation
-              ? [customerLocation, destinationLocation]
-              : undefined
-          }
-          onMapClick={() => { }}
-        />
-
+        {pendingRide ? (
+          <RideRequestMap
+            driverLocation={driverLocation}
+            pickupLocation={[pendingRide.pickup_lat, pendingRide.pickup_lng]}
+            dropoffLocation={[pendingRide.destination_lat, pendingRide.destination_lng]}
+          />
+        ) : (
+          <Map
+            center={driverLocation || [36.7538, 3.0588]}
+            recenterKey={locationKey}
+            markers={[
+              ...(driverLocation ? [{
+                position: driverLocation,
+                popup: "موقعي الحالي",
+                icon: "🚗",
+                rotation: driverHeading
+              }] : []),
+              ...(customerLocation && currentRide?.status === 'accepted' ? [
+                { position: customerLocation, popup: "موقع العميل 📍", icon: "🧍" },
+                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة (Dropoff) 🎯", icon: "pin" }] : [])
+              ] as any[] : []),
+              ...(currentRide?.status === 'in_progress' ? [
+                ...(customerLocation ? [{ position: customerLocation, popup: "نقطة الانطلاق 📍", icon: "🧍" }] : []),
+                ...(destinationLocation ? [{ position: destinationLocation, popup: "الوجهة 🎯", icon: "📍" }] : [])
+              ] as any[] : [])
+            ]}
+          />
+        )}
       </div>
 
       {/* --- Overlay: Offline State --- */}
