@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 // Add to interface
 interface DriverInfoCardProps {
@@ -23,13 +24,31 @@ interface DriverInfoCardProps {
   onCancel?: () => void;
   onEndRide?: () => void;
   price?: number;
+  rideId?: string;
 }
 
-const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, price = 0 }: DriverInfoCardProps) => {
+const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, price = 0, rideId }: DriverInfoCardProps) => {
 
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [displayPrice, setDisplayPrice] = useState(price);
+
+  useEffect(() => {
+    setDisplayPrice(price); // Sync with prop
+
+    // Fallback: Fetch if price is 0 and rideId exists
+    if ((!price || price === 0) && rideId) {
+      const fetchRealPrice = async () => {
+        const { data } = await supabase.from('rides').select('final_price, price').eq('id', rideId).single();
+        if (data) {
+          const real = data.final_price || data.price;
+          if (real) setDisplayPrice(real);
+        }
+      };
+      fetchRealPrice();
+    }
+  }, [price, rideId]);
 
   const handleCall = () => {
     if (driver.phone) window.location.href = `tel:${driver.phone}`;
@@ -156,7 +175,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, 
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
-            <span className="text-white font-bold text-xl">{price > 0 ? Math.round(price) : "---"} دج</span>
+            <span className="text-white font-bold text-xl">{displayPrice > 0 ? Math.round(displayPrice) : "---"} دج</span>
           </div>
         </div>
 
