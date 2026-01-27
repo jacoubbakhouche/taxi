@@ -212,7 +212,7 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
         <TileLayer
           attribution='&copy; Google Maps'
           url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-          className="map-tiles"
+          className="dark-map-tiles"
         />
 
         <MapController center={center} recenterKey={recenterKey} />
