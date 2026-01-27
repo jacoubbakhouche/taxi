@@ -3,21 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 
-// You can replace these URLs with your actual image paths in the public folder
-// e.g., "/images/onboarding-1.png"
+// SVG images generated locally
 const STEPS = [
     {
         id: 1,
         title: "سائقون متحقق منهم",
         description: "يخضع جميع السائقين للتحقق عند تسجيلهم في التطبيق. إننا نتحقق من رخصة قيادتهم وبطاقة هويتهم وأية مستندات أخرى مطلوبة.",
-        image: "/images/onboarding_driver_1.png", // Replace with your uploaded image 1
-        bgColor: "bg-[#84cc16]", // Lime green matching the design
+        image: "/images/onboarding_driver_1.svg",
+        bgColor: "bg-[#84cc16]",
     },
     {
         id: 2,
         title: "صور الملف التعريفي",
         description: "لسهولة التعرف وحماية الركاب، يستخدم السائقون صورة حقيقية للملف التعريفي - وهي صور شخصية حقيقية تم التقاطها أثناء التحقق.",
-        image: "/images/onboarding_driver_2.png", // Replace with your uploaded image 2
+        image: "/images/onboarding_driver_2.svg",
         bgColor: "bg-[#84cc16]",
     }
 ];
@@ -68,25 +67,14 @@ const DriverOnboarding = () => {
             <div className="flex-1 flex flex-col items-center justify-center px-8 text-center z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 key={currentStep}">
 
                 {/* Image Container */}
-                <div className="relative mb-12 w-full max-w-xs aspect-square flex items-center justify-center">
-                    {/* Abstract Shapes Background similar to your design */}
-                    <div className="absolute inset-0 bg-[#84cc16] opacity-10 blur-[100px] rounded-full transform scale-150"></div>
+                <div className="relative mb-8 w-full max-w-[320px] aspect-square flex items-center justify-center">
 
-                    {/* 
-                 PLACEHOLDER FOR YOUR IMAGES 
-                 I'm using a styled div to represent the vector art style if image is missing.
-                 Once you put your images in public/images/..., the img tag will work.
-             */}
-                    <div className="relative w-64 h-64">
+                    {/* Image */}
+                    <div className="relative w-full h-full flex items-center justify-center">
                         <img
                             src={step.image}
                             alt={step.title}
-                            className="w-full h-full object-contain drop-shadow-2xl"
-                            onError={(e) => {
-                                // Fallback if image not found to show SOMETHING cool
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full bg-[#84cc16] rounded-3xl rotate-3 flex items-center justify-center text-black font-bold text-6xl shadow-2xl skew-y-3 border-4 border-black"><span class="rotate-[-3deg] skew-y-[-3deg]">${currentStep + 1}</span></div>`;
-                            }}
+                            className="w-full h-full object-contain drop-shadow-2xl animate-in zoom-in-50 duration-500"
                         />
                     </div>
                 </div>
