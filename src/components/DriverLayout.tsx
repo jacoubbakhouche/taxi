@@ -45,17 +45,24 @@ const DriverLayout = () => {
                         أو تجاوزت الحد الأقصى للديون. لا يمكنك استقبال طلبات جديدة حتى تقوم بتسوية الوضع.
                     </p>
 
-                    <div className="bg-red-500/10 rounded-xl p-4 mb-8 border border-red-500/10">
-                        <span className="block text-sm text-red-400 mb-1">المبلغ المستحق (تقريباً)</span>
-                        <span className="text-3xl font-bold text-white">{driver.accumulated_commission || 0} دج</span>
+                    <div className="bg-red-500/10 rounded-xl p-6 mb-8 border border-red-500/20 text-center space-y-2">
+                        <span className="block text-sm text-red-400 font-medium">المبلغ الإجمالي للدفع</span>
+                        {/* We assume a base subscription fee (e.g., 3000) + any accumulated debt */}
+                        <div className="flex items-center justify-center gap-2">
+                            <span className="text-4xl font-black text-white tracking-widest">
+                                {(driver.accumulated_commission || 0)}
+                            </span>
+                            <span className="text-sm text-red-500 font-bold mt-2">دج</span>
+                        </div>
+                        <p className="text-xs text-red-500/60 mt-2">يشمل الاشتراك الشهري + العمولات السابقة</p>
                     </div>
 
                     <Button
-                        className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white h-14 text-lg font-bold rounded-xl gap-2 shadow-lg"
-                        onClick={() => window.open("https://wa.me/213555555555", "_blank")}
+                        className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white h-14 text-lg font-bold rounded-xl gap-2 shadow-lg transition-transform hover:scale-105"
+                        onClick={() => window.open(`https://wa.me/213552093766?text=${encodeURIComponent("مرحباً، أريد دفع مستحقات الاشتراك لتفعيل حسابي.")}`, "_blank")}
                     >
-                        <Phone className="w-5 h-5" />
-                        تواصل مع الإدارة للدفع
+                        <Phone className="w-5 h-5 fill-current" />
+                        اتصل للإدارة للدفع الآن
                     </Button>
 
                     <button onClick={() => navigate('/')} className="mt-6 text-gray-600 text-sm hover:text-white underline">
