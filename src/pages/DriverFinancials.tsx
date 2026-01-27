@@ -11,12 +11,15 @@ const DriverFinancials = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [driver, setDriver] = useState<any>(null);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
         fetchDriverStatus();
     }, []);
 
     const fetchDriverStatus = async () => {
+        setLoading(true);
+        setError(false);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
@@ -34,15 +37,35 @@ const DriverFinancials = () => {
             setDriver(data);
         } catch (error) {
             console.error(error);
-            toast({ title: "Error", description: "Could not load financial data", variant: "destructive" });
+            setError(true);
+            toast({ title: "خطأ في الاتصال", description: "تعذر تحميل البيانات المالية، يرجى التحقق من الإنترنت.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+    if (loading) return (
+        <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center text-white gap-4">
+            <div className="w-10 h-10 border-4 border-[#84cc16] border-t-transparent rounded-full animate-spin"></div>
+            <p>جاري التحميل...</p>
+        </div>
+    );
 
-    if (!driver) return null;
+    if (error || !driver) return (
+        <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center text-white p-6 text-center space-y-4">
+            <div className="bg-red-500/10 p-4 rounded-full">
+                <AlertTriangle className="w-10 h-10 text-red-500" />
+            </div>
+            <h2 className="text-xl font-bold">فشل في الاتصال</h2>
+            <p className="text-gray-400">يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.</p>
+            <Button onClick={fetchDriverStatus} className="bg-[#84cc16] text-black hover:bg-[#72b013] min-w-[150px]">
+                إعادة المحاولة
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/driver/dashboard")} className="text-white/60">
+                العودة للرئيسية
+            </Button>
+        </div>
+    );
 
     // Constants
     const COMMISSION_LIMIT = 5000;
