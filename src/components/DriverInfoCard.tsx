@@ -156,7 +156,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, 
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
-            <span className="text-white font-bold text-xl">{Math.round(price)} دج</span>
+            <span className="text-white font-bold text-xl">{price > 0 ? Math.round(price) : "---"} دج</span>
           </div>
         </div>
 
