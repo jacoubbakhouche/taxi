@@ -862,7 +862,7 @@ const CustomerDashboard = () => {
                 </div>
 
                 <Button className="w-full text-lg font-bold py-7 rounded-xl bg-[#84cc16] text-black hover:bg-[#84cc16]/90 shadow-lg shadow-[#84cc16]/10" onClick={handleRequestRide}>
-                  {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : `بحث عن سائق (${price} دج)`}
+                  {isSearchingDriver ? <Loader2 className="animate-spin mr-2" /> : `بحث عن سائق (${Math.round(price)} دج)`}
                 </Button>
               </div>
             )}
