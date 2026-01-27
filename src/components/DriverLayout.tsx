@@ -59,7 +59,7 @@ const DriverLayout = () => {
 
                     <Button
                         className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white h-14 text-lg font-bold rounded-xl gap-2 shadow-lg transition-transform hover:scale-105"
-                        onClick={() => window.open(`https://wa.me/213552093766?text=${encodeURIComponent("مرحباً، أريد دفع مستحقات الاشتراك لتفعيل حسابي.")}`, "_blank")}
+                        onClick={() => window.open(`https://wa.me/213562408507?text=${encodeURIComponent("مرحباً، أريد دفع مستحقات الاشتراك لتفعيل حسابي.")}`, "_blank")}
                     >
                         <Phone className="w-5 h-5 fill-current" />
                         اتصل للإدارة للدفع الآن

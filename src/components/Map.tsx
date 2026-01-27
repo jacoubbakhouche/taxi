@@ -45,8 +45,10 @@ const MapMarkers = memo(({ markers }: { markers: MapProps['markers'] }) => {
 
         if (marker.icon === "🚗" || marker.icon === "car") {
           iconHtml = renderToStaticMarkup(
-            <div style={{ transform: `rotate(${marker.rotation || 0}deg)`, transition: "transform 0.5s ease-in-out" }}>
-              <div style={{ fontSize: '32px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>🚖</div>
+            <div className="relative" style={{ transform: `rotate(${marker.rotation || 0}deg)`, transition: "transform 0.5s ease-in-out" }}>
+              {/* Glow effect for visibility on dark map */}
+              <div className="absolute inset-0 bg-[#84cc16]/40 blur-lg rounded-full transform scale-150" />
+              <div className="relative text-[36px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">🚖</div>
             </div>
           );
         } else if (marker.icon === "📍" || marker.icon === "pin") {
@@ -208,9 +210,9 @@ const Map = ({ center, zoom = 13, markers = [], onMapClick, route, recenterKey }
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; Google Maps'
-          url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-          className="dark-map-tiles"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          className="map-tiles"
         />
 
         <MapController center={center} recenterKey={recenterKey} />

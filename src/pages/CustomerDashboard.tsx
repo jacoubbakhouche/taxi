@@ -625,13 +625,24 @@ const CustomerDashboard = () => {
   // 5. Render
   // ===========================================
   const getMarkers = () => {
-    const markers = [];
+    // 1. My Location
     if (userLocation) markers.push({ position: userLocation, icon: "🧍", popup: "أنا" });
-    if (destination) markers.push({ position: destination, icon: "📍", popup: "الوجهة" });
-    if (driverLocation) markers.push({ position: driverLocation, icon: "🚗", popup: "السائق" });
 
-    // Add Phantom Cars
-    if (rideStatus === 'idle' || rideStatus === 'searching') {
+    // 2. Destination
+    if (destination) markers.push({ position: destination, icon: "📍", popup: "الوجهة" });
+
+    // 3. Assigned Driver (The Real One)
+    if (driverLocation && (rideStatus === 'accepted' || rideStatus === 'in_progress')) {
+      markers.push({
+        position: driverLocation,
+        icon: "🚗",
+        popup: `السائق: ${driverInfo?.full_name || "قادم إليك"}`,
+        // We could add rotation if available in driverInfo
+      });
+    }
+
+    // 4. Phantom Cars (Only when IDLE or SEARCHING) -> "Lighter Map" when busy
+    if (rideStatus === 'idle' || rideStatus === 'searching' || rideStatus === 'pending') {
       markers.push(...nearbyDrivers);
     }
 
