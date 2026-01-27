@@ -1,22 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-// SVG images generated locally
+// Images uploaded by user (PNGs)
 const STEPS = [
     {
         id: 1,
         title: "سائقون متحقق منهم",
         description: "يخضع جميع السائقين للتحقق عند تسجيلهم في التطبيق. إننا نتحقق من رخصة قيادتهم وبطاقة هويتهم وأية مستندات أخرى مطلوبة.",
-        image: "/images/onboarding_driver_1.svg",
+        image: "/images/onboarding_driver_1.png",
         bgColor: "bg-[#84cc16]",
     },
     {
         id: 2,
         title: "صور الملف التعريفي",
         description: "لسهولة التعرف وحماية الركاب، يستخدم السائقون صورة حقيقية للملف التعريفي - وهي صور شخصية حقيقية تم التقاطها أثناء التحقق.",
-        image: "/images/onboarding_driver_2.svg",
+        image: "/images/onboarding_driver_2.png",
         bgColor: "bg-[#84cc16]",
     }
 ];

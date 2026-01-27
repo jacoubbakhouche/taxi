@@ -11,7 +11,7 @@ import RideRequestCard from "@/components/RideRequestCard";
 import ActiveRideCard from "@/components/ActiveRideCard";
 import RatingDialog from "@/components/RatingDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck, Menu, History, UserCircle } from "lucide-react";
+import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck, Menu, History, UserCircle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DriverDashboard = () => {
@@ -1073,6 +1073,15 @@ const DriverDashboard = () => {
                 >
                   <UserCircle className="w-6 h-6" />
                   الملف الشخصي
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-4 h-14 text-lg hover:bg-white/5 hover:text-[#84cc16] transition-colors"
+                  onClick={() => navigate("/driver/financials")}
+                >
+                  <CreditCard className="w-6 h-6" />
+                  الوضع المالي
                 </Button>
 
                 <Button
