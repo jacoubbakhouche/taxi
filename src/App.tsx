@@ -13,6 +13,7 @@ import RideHistory from "./pages/RideHistory";
 import DriverDashboard from "./pages/DriverDashboard";
 import CustomerProfileView from "./pages/CustomerProfileView";
 import DriverProfile from "./pages/DriverProfile";
+import DriverOnboarding from "./pages/DriverOnboarding";
 import DriverHistory from "./pages/DriverHistory";
 import DriverProfileView from "./pages/DriverProfileView";
 import LocationPermission from "./pages/LocationPermission";
@@ -42,6 +43,7 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/customer/auth" element={<CustomerAuth />} />
+            <Route path="/driver/onboarding" element={<DriverOnboarding />} />
             <Route path="/driver/auth" element={<DriverAuth />} />
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />

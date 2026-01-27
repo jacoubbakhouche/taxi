@@ -66,7 +66,7 @@ const RoleSelection = () => {
           {/* Driver Card */}
           <Card
             className="group relative overflow-hidden bg-[#1A1A1A] border border-[#333] hover:border-[#84cc16] transition-all duration-300 cursor-pointer p-6 animate-in slide-in-from-bottom-4 fade-in duration-500 delay-200"
-            onClick={() => navigate("/driver/auth")}
+            onClick={() => navigate("/driver/onboarding")}
           >
             <div className="flex items-center gap-5">
               <div className="w-14 h-14 rounded-xl bg-[#222] flex items-center justify-center group-hover:bg-[#84cc16] transition-colors duration-300">
