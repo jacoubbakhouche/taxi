@@ -129,7 +129,8 @@ const CustomerDashboard = () => {
           ) {
             setDestination([activeRide.destination_lat, activeRide.destination_lng]);
             setSearchQuery(activeRide.destination_address || "الوجهة");
-            setPrice(activeRide.price);
+            // Priority: Final Deal > Customer Offer > Original Estimate
+            setPrice(activeRide.final_price || activeRide.customer_offer_price || activeRide.price);
             setDistance(activeRide.distance);
             setDuration(activeRide.duration);
 
@@ -215,6 +216,7 @@ const CustomerDashboard = () => {
 
           if (updatedRide.status === 'accepted') {
             setRideStatus('accepted');
+            if (updatedRide.final_price) setPrice(updatedRide.final_price); // Update price from DB
             if (updatedRide.driver_id) fetchDriverDetails(updatedRide.driver_id);
             toast({ title: "تم قبول الطلب! 🚕", description: "السائق قادم إليك" });
           }
