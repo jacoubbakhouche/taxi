@@ -55,6 +55,8 @@ const CustomerDashboard = () => {
   const [candidateDriver, setCandidateDriver] = useState<any>(null);
   const [isSearchingDriver, setIsSearchingDriver] = useState(false);
   const [declinedDrivers, setDeclinedDrivers] = useState<string[]>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]); // Phantom/Nearby drivers
+
 
   // --- UI State ---
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
@@ -625,6 +627,8 @@ const CustomerDashboard = () => {
   // 5. Render
   // ===========================================
   const getMarkers = () => {
+    const markers: any[] = []; // Initialize empty array
+
     // 1. My Location
     if (userLocation) markers.push({ position: userLocation, icon: "🧍", popup: "أنا" });
 
