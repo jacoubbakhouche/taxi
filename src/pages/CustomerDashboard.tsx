@@ -55,7 +55,7 @@ const CustomerDashboard = () => {
   const [candidateDriver, setCandidateDriver] = useState<any>(null);
   const [isSearchingDriver, setIsSearchingDriver] = useState(false);
   const [declinedDrivers, setDeclinedDrivers] = useState<string[]>([]);
-  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]); // Phantom/Nearby drivers
+
 
 
   // --- UI State ---
