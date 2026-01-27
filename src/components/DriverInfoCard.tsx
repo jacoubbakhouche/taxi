@@ -22,11 +22,9 @@ interface DriverInfoCardProps {
   rideStatus?: string; // accepted, in_progress
   onCancel?: () => void;
   onEndRide?: () => void;
-  price?: number;
 }
 
-// Update component signature to accept price
-const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, price = 0 }: DriverInfoCardProps) => {
+const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }: DriverInfoCardProps) => {
 
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -157,7 +155,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, 
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
-            <span className="text-white font-bold text-xl">{Math.round(price)} دج</span>
+            <span className="text-white font-bold text-xl">321 دج</span>
           </div>
         </div>
 
