@@ -35,20 +35,52 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, 
   const [displayPrice, setDisplayPrice] = useState(price);
 
   useEffect(() => {
-    setDisplayPrice(price); // Sync with prop
+    // 1. Initial Sync from Prop (if valid)
+    if (price && price > 0) setDisplayPrice(price);
 
-    // Fallback: Fetch if price is 0 and rideId exists
-    if ((!price || price === 0) && rideId) {
-      const fetchRealPrice = async () => {
-        const { data } = await supabase.from('rides').select('final_price, price').eq('id', rideId).single();
+    // 2. Intelligent Fetch & Subscribe (The "Smart" Logic)
+    if (rideId) {
+      const fetchAndSubscribe = async () => {
+        // A. Immediate Fetch
+        const { data } = await supabase
+          .from('rides')
+          .select('final_price, price, customer_offer_price')
+          .eq('id', rideId)
+          .single();
+
         if (data) {
-          const real = data.final_price || data.price;
-          if (real) setDisplayPrice(real);
+          // Priority: Final Deal > Main Price > Customer Offer
+          const realPrice = data.final_price || data.price || data.customer_offer_price;
+          if (realPrice) setDisplayPrice(realPrice);
         }
+
+        // B. Realtime Subscription for Updates
+        const channel = supabase
+          .channel(`ride-price-${rideId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'rides',
+              filter: `id=eq.${rideId}`,
+            },
+            (payload) => {
+              const updated = payload.new;
+              const newPrice = updated.final_price || updated.price || updated.customer_offer_price;
+              if (newPrice) setDisplayPrice(newPrice);
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       };
-      fetchRealPrice();
+
+      fetchAndSubscribe();
     }
-  }, [price, rideId]);
+  }, [rideId, price]);
 
   const handleCall = () => {
     if (driver.phone) window.location.href = `tel:${driver.phone}`;
