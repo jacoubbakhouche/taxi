@@ -22,6 +22,7 @@ BEGIN
     driver_id = v_driver_id,
     status = 'accepted',
     final_price = v_amount,
+    price = v_amount, -- SYNC: Update the main display price to match the deal
     updated_at = NOW()
   WHERE id = v_ride_id;
 

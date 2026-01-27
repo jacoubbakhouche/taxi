@@ -210,7 +210,9 @@ const ActiveRideCard = ({
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-bold text-white">{Math.round(currentRide.price || 0)} DA</p>
+                                    <p className="text-2xl font-bold text-white">
+                                        {Math.round(currentRide.final_price || currentRide.customer_offer_price || currentRide.price || 0)} DA
+                                    </p>
                                     <span className="bg-white/10 text-white text-[10px] px-2 py-1 rounded uppercase font-bold">Cash</span>
                                 </div>
                             </div>

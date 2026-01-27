@@ -350,6 +350,7 @@ const CustomerDashboard = () => {
     setDriverInfo(null);
     setCandidateDriver(null);
     setIsSearchingDriver(false);
+    setRejectedDriverIds([]); // Crucial to allow finding skipped drivers again in new ride
     localStorage.removeItem('currentRideId');
   };
 
@@ -930,7 +931,12 @@ const CustomerDashboard = () => {
       {/* --- Rating Dialog --- */}
       <RatingDialog
         open={showRating}
-        onOpenChange={setShowRating}
+        onOpenChange={(open) => {
+          setShowRating(open);
+          if (!open && rideStatus === 'completed') {
+            resetState(); // Force reset if user closes dialog without rating
+          }
+        }}
         onSubmit={handleRatingSubmit}
         name={driverInfo?.full_name || "السائق"}
         role="driver"
