@@ -19,12 +19,12 @@ const Index = () => {
       <div className="flex-1 flex flex-col items-center justify-center w-full space-y-8 mt-10">
 
         {/* Hero Image - Centered and Contained */}
-        <div className="relative w-full max-w-[320px] aspect-square flex items-center justify-center">
+        <div className="relative w-full max-w-[340px] aspect-square flex items-center justify-center mb-6">
           <div className="absolute inset-0 bg-[#84cc16]/10 rounded-full blur-[80px] pointer-events-none"></div>
           <img
-            src="/images/driver_welcome_hero.png"
+            src="/images/welcome_illustration.png"
             alt="Welcome"
-            className="w-full h-full object-contain relative z-10 drop-shadow-2xl animate-in fade-in zoom-in duration-700"
+            className="w-full h-auto object-contain relative z-10 drop-shadow-2xl animate-in fade-in zoom-in duration-700"
           />
         </div>
 
