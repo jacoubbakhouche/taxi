@@ -164,7 +164,7 @@ const DriverProfile = () => {
 
   if (!profile) return null;
 
-  const completedRides = getRidesByStatus(["completed"]).length;
+  const completedRides = profile.total_rides || 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -410,51 +410,7 @@ const DriverProfile = () => {
       </div>
 
       {/* Tabs */}
-      <div className="px-4 -mt-8">
-        <Tabs defaultValue="completed" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-card shadow-lg">
-            <TabsTrigger value="completed">المكتملة</TabsTrigger>
-            <TabsTrigger value="cancelled">الملغاة</TabsTrigger>
-            <TabsTrigger value="rejected">المرفوضة</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="completed" className="space-y-3 mt-4">
-            {getRidesByStatus(["completed"]).length === 0 ? (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">لا توجد رحلات مكتملة</p>
-              </Card>
-            ) : (
-              getRidesByStatus(["completed"]).map((ride) => (
-                <RideCard key={ride.id} ride={ride} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="cancelled" className="space-y-3 mt-4">
-            {getRidesByStatus(["cancelled"]).length === 0 ? (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">لا توجد رحلات ملغاة</p>
-              </Card>
-            ) : (
-              getRidesByStatus(["cancelled"]).map((ride) => (
-                <RideCard key={ride.id} ride={ride} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="rejected" className="space-y-3 mt-4">
-            {getRidesByStatus(["rejected"]).length === 0 ? (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">لا توجد رحلات مرفوضة</p>
-              </Card>
-            ) : (
-              getRidesByStatus(["rejected"]).map((ride) => (
-                <RideCard key={ride.id} ride={ride} />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
-      </div >
+      {/* Removed Tabs (Moved to DriverHistory.tsx) */}
     </div >
   );
 };
