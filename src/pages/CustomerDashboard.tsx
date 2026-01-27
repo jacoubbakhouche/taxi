@@ -922,6 +922,7 @@ const CustomerDashboard = () => {
           <DriverInfoCard
             driver={driverInfo}
             rideStatus={rideStatus}
+            price={price} // Pass current price
             onCancel={handleCancelRide}
             onEndRide={handleEndRide}
           />

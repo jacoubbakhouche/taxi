@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+// Add to interface
 interface DriverInfoCardProps {
   driver: {
     id: string;
@@ -21,9 +22,12 @@ interface DriverInfoCardProps {
   rideStatus?: string; // accepted, in_progress
   onCancel?: () => void;
   onEndRide?: () => void;
+  price?: number;
 }
 
-const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }: DriverInfoCardProps) => {
+// Update component signature to accept price
+const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide, price = 0 }: DriverInfoCardProps) => {
+
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -153,7 +157,7 @@ const DriverInfoCard = ({ driver, rideStatus = 'accepted', onCancel, onEndRide }
         <div className="flex items-center justify-between pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
-            <span className="text-white font-bold text-xl">321 دج</span>
+            <span className="text-white font-bold text-xl">{Math.round(price)} دج</span>
           </div>
         </div>
 
