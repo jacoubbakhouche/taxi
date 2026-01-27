@@ -138,10 +138,22 @@ const CustomerDashboard = () => {
               activeRide.pickup_lat != null &&
               activeRide.pickup_lng != null
             ) {
-              setRoute([
-                [activeRide.pickup_lat, activeRide.pickup_lng],
-                [activeRide.destination_lat, activeRide.destination_lng]
-              ]);
+              // 1. Set simple start/end first (fallback)
+              const pickup = [activeRide.pickup_lat, activeRide.pickup_lng] as [number, number];
+              const dest = [activeRide.destination_lat, activeRide.destination_lng] as [number, number];
+              setRoute([pickup, dest]);
+
+              // 2. Fetch Detailed Route Implementation
+              // We need to re-fetch the route geometry so it follows the road
+              fetch(`https://router.project-osrm.org/route/v1/driving/${pickup[1]},${pickup[0]};${dest[1]},${dest[0]}?overview=full&geometries=geojson`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.code === 'Ok' && data.routes?.[0]) {
+                    const geometry = data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+                    setRoute(geometry);
+                  }
+                })
+                .catch(err => console.error("Failed to restore detailed route:", err));
             }
           }
 

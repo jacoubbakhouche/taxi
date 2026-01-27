@@ -13,6 +13,7 @@ import RideHistory from "./pages/RideHistory";
 import DriverDashboard from "./pages/DriverDashboard";
 import CustomerProfileView from "./pages/CustomerProfileView";
 import DriverProfile from "./pages/DriverProfile";
+import DriverHistory from "./pages/DriverHistory";
 import DriverProfileView from "./pages/DriverProfileView";
 import LocationPermission from "./pages/LocationPermission";
 import NotFound from "./pages/NotFound";
@@ -47,6 +48,7 @@ const App = () => {
             <Route path="/customer/history" element={<RideHistory />} />
             <Route path="/driver/dashboard" element={<DriverDashboard />} />
             <Route path="/driver/profile" element={<DriverProfile />} />
+            <Route path="/driver/history" element={<DriverHistory />} />
             <Route path="/driver/customer/:customerId" element={<CustomerProfileView />} />
             <Route path="/customer/driver/:driverId" element={<DriverProfileView />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

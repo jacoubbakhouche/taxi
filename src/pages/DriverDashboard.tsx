@@ -1078,7 +1078,7 @@ const DriverDashboard = () => {
                 <Button
                   variant="ghost"
                   className="justify-start gap-4 h-14 text-lg hover:bg-white/5 hover:text-[#84cc16] transition-colors"
-                  onClick={() => toast({ title: "قريباً", description: "سجل الرحلات يعمل عليه المطورون" })}
+                  onClick={() => navigate("/driver/history")}
                 >
                   <History className="w-6 h-6" />
                   سجل الرحلات

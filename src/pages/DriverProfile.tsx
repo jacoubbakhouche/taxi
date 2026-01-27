@@ -39,7 +39,6 @@ interface Ride {
 const DriverProfile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -51,7 +50,6 @@ const DriverProfile = () => {
 
   useEffect(() => {
     loadProfile();
-    loadRides();
   }, []);
 
   const loadProfile = async () => {
@@ -158,59 +156,7 @@ const DriverProfile = () => {
     }
   };
 
-  const getRidesByStatus = (status: string[]) => {
-    return rides.filter((ride) => status.includes(ride.status));
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-DZ", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const RideCard = ({ ride }: { ride: Ride }) => (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 text-primary mt-1" />
-            <div>
-              <p className="text-sm text-muted-foreground">من</p>
-              <p className="font-medium">{ride.pickup_address}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 text-destructive mt-1" />
-            <div>
-              <p className="text-sm text-muted-foreground">إلى</p>
-              <p className="font-medium">{ride.destination_address}</p>
-            </div>
-          </div>
-        </div>
-        <div className="text-left">
-          <p className="text-xl font-bold text-primary">{ride.price} دج</p>
-          <p className="text-xs text-muted-foreground">
-            {ride.distance?.toFixed(1)} كم
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-2 border-t">
-        <p className="text-xs text-muted-foreground">{formatDate(ride.created_at)}</p>
-        {ride.rating && (
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-lime-500 text-lime-500" />
-            <span className="text-sm font-medium">{ride.rating}</span>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
+  // Removed Rides Logic (Moved to DriverHistory.tsx)
 
   if (loading) {
     return <ProfileSkeleton />;
