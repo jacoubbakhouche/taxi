@@ -270,103 +270,145 @@ export const DriverOffersList = ({
     }
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[2000] flex flex-col h-[85vh] pointer-events-none">
+        <>
+            {/* --- LAYER 1: Active Bidding Card (Always at Bottom) --- */}
+            {/* --- LAYER 1: Active Bidding Card (Base) --- */}
+            {/* Stays anchored at the bottom. Handles timer, pricing, and auto-accept. */}
+            <div className={`fixed bottom-0 left-0 right-0 z-[2000] bg-[#111] rounded-t-[2rem] border-t border-white/10 shadow-[0_-10px_50px_rgba(0,0,0,0.8)] transition-all duration-500 ease-in-out ${offers.length > 0 ? 'scale-95 opacity-50 blur-[1px]' : 'scale-100 opacity-100'}`}>
 
-            {/* --- BACKGROUND LAYER: Controls & Route Info --- */}
-            <div className="absolute inset-x-0 bottom-0 top-[20%] bg-[#111] rounded-t-[2rem] border-t border-white/10 p-6 opacity-40 pointer-events-auto filter blur-[1px] transition-all duration-300">
-                {/* This section holds the "context" that stays in the back */}
-                <div className="flex flex-col h-full pointer-events-none opacity-50">
-                    <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
+                {/* Drag Handle */}
+                <div className="w-full flex justify-center pt-3 pb-1 shrink-0">
+                    <div className="w-12 h-1 bg-white/20 rounded-full"></div>
+                </div>
 
-                    {/* Price & Search Info (Dimmed) */}
+                {/* Progress Bar */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gray-800/50 rounded-t-[2rem] overflow-hidden">
+                    <div
+                        className="h-full bg-[#84cc16] transition-all duration-1000 ease-linear shadow-[0_0_10px_#84cc16]"
+                        style={{ width: `${progressPercent}%` }}
+                    ></div>
+                </div>
+
+                <div className="px-5 pt-4 pb-6">
+                    {/* Header: Title & Timer */}
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-white font-bold text-lg">جاري البحث...</h2>
+                        <div>
+                            <h2 className="text-white font-bold text-lg">جاري البحث عن سائق...</h2>
+                            <p className="text-xs text-gray-400">سيظهر العرض الأنسب لك هنا</p>
+                        </div>
                         <div className="bg-[#2A2A2A] px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
                             <Clock className="w-3 h-3 text-[#84cc16]" />
                             <span className="font-mono text-white font-bold text-sm">{formatTime(searchTimeLeft)}</span>
                         </div>
                     </div>
 
-                    {/* Price Display */}
-                    <div className="bg-[#2A2A2A] p-4 rounded-xl border border-white/5 flex items-center justify-between mb-4">
-                        <span className="text-gray-400">السعر المقترح</span>
-                        <span className="text-2xl font-bold text-white">{localPrice} <span className="text-xs text-gray-500">دج</span></span>
+                    {/* Auto Accept Toggle (Restored) */}
+                    <div className="flex items-center justify-between bg-[#1A1A1A] p-3 rounded-xl border border-white/5 mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-full bg-[#84cc16]/10 text-[#84cc16]">
+                                <Zap className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h4 className="text-white text-sm font-bold">قبول تلقائي</h4>
+                                <p className="text-[10px] text-gray-400">قبول العروض التي تطابق سعرك مباشرة</p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={autoAccept}
+                            onCheckedChange={setAutoAccept}
+                            className="data-[state=checked]:bg-[#84cc16]"
+                        />
                     </div>
 
-                    {/* Route (Dimmed) */}
-                    <div className="space-y-4">
+                    {/* Route Info (Restored) */}
+                    <div className="bg-[#1A1A1A] p-3 rounded-xl border border-white/5 mb-4 space-y-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <p className="text-gray-500 text-sm truncate">{pickupAddress}</p>
+                            <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                            <p className="text-white text-sm truncate">{pickupAddress}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-[#84cc16] rounded-full"></div>
-                            <p className="text-gray-500 text-sm truncate">{destinationAddress}</p>
+                            <Navigation className="w-4 h-4 text-[#84cc16] shrink-0" />
+                            <p className="text-white text-sm truncate">{destinationAddress}</p>
                         </div>
+                    </div>
+
+                    {/* Price Controls */}
+                    <div className="flex gap-2 mb-3">
+                        <Button variant="secondary" className="h-12 w-16 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg pointer-events-auto" onClick={handleDecreasePrice}>-15</Button>
+                        <div className="flex-1 bg-[#2A2A2A] rounded-xl flex flex-col items-center justify-center border border-white/5">
+                            <span className="text-2xl font-bold text-white tracking-tight">{localPrice} <span className="text-sm font-normal text-gray-500">دج</span></span>
+                        </div>
+                        <Button variant="secondary" className="h-12 w-16 rounded-xl bg-[#2A2A2A] text-white hover:bg-[#333] border border-white/5 font-bold text-lg pointer-events-auto" onClick={handleIncreasePrice}>+15</Button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                        <Button variant="destructive" onClick={onCancelRide} className="flex-1 bg-[#333] text-white hover:bg-red-500/20 hover:text-red-500 border border-white/5 font-bold h-12 rounded-xl pointer-events-auto">
+                            إلغاء
+                        </Button>
+                        <Button className="flex-[2] bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold h-12 rounded-xl pointer-events-auto border-b-4 border-[#5a8a12] active:border-b-0 active:translate-y-1 transition-all" onClick={submitPriceUpdate}>
+                            تحديث السعر 🔥
+                        </Button>
                     </div>
                 </div>
             </div>
 
-            {/* --- FOREGROUND LAYER: Offers List (Floating) --- */}
-            <div className="relative flex-1 flex flex-col justify-end pb-8 px-4 pointer-events-auto z-20">
-                {/* Scrollable area for offers */}
-                <div className="w-full max-h-[60vh] overflow-y-auto space-y-3 scrollbar-hide pb-20">
+            {/* --- LAYER 2: Offers Overlay (Pop-up Sheet) --- */}
+            {offers.length > 0 && (
+                <div className="fixed inset-0 z-[2500] flex flex-col justify-end">
 
-                    {/* Offers Title */}
-                    {offers.length > 0 && (
-                        <div className="sticky top-0 z-10 bg-gradient-to-b from-transparent via-[#111]/80 to-transparent py-2 mb-2">
-                            <h3 className="text-white font-bold text-lg drop-shadow-md text-center">
-                                {offers.length} عروض متاحة ⚡
-                            </h3>
+                    {/* Backdrop (Dimming Layer 1) */}
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+
+                    {/* The Offers Sheet */}
+                    <div className="relative z-10 bg-[#1A1A1A] rounded-t-[2.5rem] shadow-2xl border-t border-white/15 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-20 duration-500">
+
+                        {/* Sheet Handle */}
+                        <div className="w-full flex justify-center pt-4 pb-2">
+                            <div className="w-14 h-1.5 bg-zinc-600 rounded-full"></div>
                         </div>
-                    )}
 
-                    {/* The Offers */}
-                    {offers.map((offer) => (
-                        <OfferCard
-                            key={offer.id}
-                            offer={offer}
-                            onAccept={() => onAcceptOffer(offer.id)}
-                            onReject={() => {
-                                setRejectedOfferIds(prev => new Set(prev).add(offer.id));
-                                setOffers(prev => prev.filter(o => o.id !== offer.id));
-                            }}
-                        />
-                    ))}
+                        {/* Title Context */}
+                        <div className="px-6 pb-4 pt-2 border-b border-white/5">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-white font-bold text-xl">
+                                    وصلتك {offers.length} عروض! 🎉
+                                </h3>
+                                <Badge className="bg-[#84cc16] text-black font-bold border-0">
+                                    أفضل عرض: {Math.min(...offers.map(o => o.amount))} دج
+                                </Badge>
+                            </div>
+                            <p className="text-zinc-400 text-sm mt-1">اختر السائق المناسب لك من القائمة أدناه.</p>
+                        </div>
 
-                    {/* Controls overlay if no offers yet (Optional interaction) */}
-                    {offers.length === 0 && (
-                        <div className="bg-[#1A1A1A] border border-white/10 p-4 rounded-2xl shadow-2xl">
-                            <div className="text-center mb-4">
-                                <p className="text-gray-400 text-sm">لم تصل عروض بعد. يمكنك رفع السعر لتشجيع السائقين.</p>
-                            </div>
-                            <div className="flex gap-2 mb-4">
-                                <Button variant="secondary" className="h-12 w-16 bg-[#333] text-white rounded-lg font-bold hover:bg-[#444]" onClick={handleDecreasePrice}>-15</Button>
-                                <div className="flex-1 bg-[#222] rounded-lg flex items-center justify-center border border-white/5">
-                                    <span className="text-xl font-bold text-white">{localPrice} دج</span>
-                                </div>
-                                <Button variant="secondary" className="h-12 w-16 bg-[#333] text-white rounded-lg font-bold hover:bg-[#444]" onClick={handleIncreasePrice}>+15</Button>
-                            </div>
-                            <Button className="w-full h-12 bg-[#D1FA58] hover:bg-[#b0d64a] text-black font-bold rounded-xl" onClick={submitPriceUpdate}>
-                                تحديث السعر
+                        {/* Scrollable Offers List */}
+                        <div className="overflow-y-auto p-4 space-y-3 pb-safe-bottom min-h-[40vh]">
+                            {offers.map((offer) => (
+                                <OfferCard
+                                    key={offer.id}
+                                    offer={offer}
+                                    onAccept={() => onAcceptOffer(offer.id)}
+                                    onReject={() => {
+                                        setRejectedOfferIds(prev => new Set(prev).add(offer.id));
+                                        setOffers(prev => prev.filter(o => o.id !== offer.id));
+                                    }}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Bottom Action Area in Overlay */}
+                        <div className="p-4 bg-[#111] border-t border-white/10 pb-8">
+                            <Button
+                                variant="outline"
+                                className="w-full h-12 border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-bold rounded-xl"
+                                onClick={onCancelRide}
+                            >
+                                إلغاء كل شيء
                             </Button>
                         </div>
-                    )}
-
+                    </div>
                 </div>
-
-                {/* Bottom Actions */}
-                <div className="mt-auto pt-4 relative z-50">
-                    <Button
-                        variant="destructive"
-                        className="w-full h-12 bg-[#333]/90 backdrop-blur-md hover:bg-neutral-800 text-white/70 border border-white/5 rounded-xl font-bold"
-                        onClick={onCancelRide}
-                    >
-                        إلغاء الطلب
-                    </Button>
-                </div>
-            </div>
-
-        </div>
+            )}
+        </>
     );
 };
