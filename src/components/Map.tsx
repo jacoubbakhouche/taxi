@@ -101,49 +101,40 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
   const map = useMap();
   const [isLocked, setIsLocked] = useState(true);
   const isLockedRef = useRef(true);
-  const isInteractingRef = useRef(false);
+  // We track if we are currently "flying" or "panning" automatically
+  const isAutoMovingRef = useRef(false);
 
-  useEffect(() => {
-    const container = map.getContainer();
-    const startInteraction = () => {
-      isInteractingRef.current = true;
-      if (isLockedRef.current) {
-        isLockedRef.current = false;
-        setIsLocked(false);
-      }
-    };
-    const endInteraction = () => { isInteractingRef.current = false; };
-
-    container.addEventListener('mousedown', startInteraction);
-    container.addEventListener('touchstart', startInteraction);
-    window.addEventListener('mouseup', endInteraction);
-    window.addEventListener('touchend', endInteraction);
-
-    return () => {
-      container.removeEventListener('mousedown', startInteraction);
-      container.removeEventListener('touchstart', startInteraction);
-      window.removeEventListener('mouseup', endInteraction);
-      window.removeEventListener('touchend', endInteraction);
-    };
-  }, [map]);
-
+  // Interaction handlers to UNLOCK the map
   useMapEvents({
-    dragstart: () => { isInteractingRef.current = true; isLockedRef.current = false; setIsLocked(false); },
-    zoomstart: () => { isInteractingRef.current = true; isLockedRef.current = false; setIsLocked(false); },
-    dragend: () => { isInteractingRef.current = false; },
-    zoomend: () => { isInteractingRef.current = false; }
+    dragstart: () => {
+      // User started dragging
+      isLockedRef.current = false;
+      setIsLocked(false);
+    },
+    zoomstart: () => {
+      // User started zooming (pinching/scroll)
+      isLockedRef.current = false;
+      setIsLocked(false);
+    },
+    // We catch "movestart" to detect valid user pans, 
+    // but dragstart is more specific to "user intent".
   });
 
+  // Watch for Center updates (GPS moving)
   useEffect(() => {
-    if (isLockedRef.current && !isInteractingRef.current && center) {
-      map.flyTo(center, 16, { animate: true, duration: 1.5 });
+    if (isLockedRef.current && center) {
+      // Use panTo for smoother following without changing zoom
+      isAutoMovingRef.current = true;
+      map.panTo(center, { animate: true, duration: 1.0 });
+      // Reset auto flag after animation "theoretically" ends? 
+      // Actually panTo handles itself.
     }
   }, [center, map]);
 
   const handleRecenter = useCallback(() => {
     isLockedRef.current = true;
     setIsLocked(true);
-    isInteractingRef.current = false;
+    // Explicitly re-center
     map.flyTo(center, 16, { animate: true, duration: 1 });
   }, [center, map]);
 
@@ -159,11 +150,16 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
       )}
       style={{ marginBottom: "350px", marginRight: "16px", zIndex: 4000 }}
     >
+      <div className="absolute -top-12 right-0"> {/* Label or hint could go here */} </div>
       <button
-        onClick={(e) => { e.stopPropagation(); handleRecenter(); }}
-        className="w-12 h-12 rounded-full border border-[#84cc16] shadow-[0_5px_15px_rgba(0,0,0,0.5)] bg-[#1A1A1A] text-[#84cc16] flex items-center justify-center transition-all duration-300 active:scale-95 hover:bg-[#84cc16] hover:text-black"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleRecenter();
+        }}
+        className="w-12 h-12 rounded-full border-2 border-[#84cc16] shadow-[0_4px_20px_rgba(0,0,0,0.6)] bg-[#1A1A1A] text-[#84cc16] flex items-center justify-center transition-all duration-200 active:scale-95 hover:bg-[#84cc16] hover:text-black"
+        title="Re-center"
       >
-        <Navigation className="w-5 h-5 fill-current" />
+        <Navigation className="w-6 h-6 fill-current" />
       </button>
     </div>
   );
