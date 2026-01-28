@@ -112,7 +112,7 @@ const DriverFinancials = () => {
 
                     <div className="mb-2 flex justify-between items-end">
                         <span className={`text-3xl font-bold ${commission > COMMISSION_LIMIT * 0.8 ? "text-red-500" : "text-white"}`}>
-                            {commission} <span className="text-sm">دج</span>
+                            {commission.toFixed(2)} <span className="text-sm">دج</span>
                         </span>
                         <span className="text-xs text-gray-500">
                             {progressPercent.toFixed(1)}%

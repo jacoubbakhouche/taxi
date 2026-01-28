@@ -46,6 +46,7 @@ const DriverProfile = () => {
   const [editVehicleType, setEditVehicleType] = useState("");
   const [editCarModel, setEditCarModel] = useState("");
   const [editLicensePlate, setEditLicensePlate] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [totalEarnings, setTotalEarnings] = useState(0);
 
   useEffect(() => {
@@ -74,6 +75,11 @@ const DriverProfile = () => {
       setEditVehicleType(user.vehicle_type || "");
       setEditCarModel(user.car_model || "");
       setEditLicensePlate(user.license_plate || "");
+      setEditPhone(user.phone || "");
+
+      // Load rides stats immediately
+      loadRides(user.id);
+
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -85,27 +91,15 @@ const DriverProfile = () => {
     }
   };
 
-  const loadRides = async () => {
+  const loadRides = async (driverId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_id", session.user.id)
-        .single();
-
-      if (!user) return;
-
       const { data, error } = await supabase
         .from("rides")
         .select("*")
-        .eq("driver_id", user.id)
+        .eq("driver_id", driverId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRides(data || []);
 
       // Calculate total earnings from completed rides
       const earnings = (data || [])
@@ -125,6 +119,7 @@ const DriverProfile = () => {
         .from("users")
         .update({
           full_name: editName,
+          phone: editPhone, // Updated phone in DB
           profile_image: editImage || null,
           vehicle_type: editVehicleType || null,
           car_model: editCarModel || null,
@@ -137,9 +132,11 @@ const DriverProfile = () => {
       setProfile({
         ...profile,
         full_name: editName,
+        phone: editPhone, // Update local profile state
         profile_image: editImage || null,
         vehicle_type: editVehicleType || null,
         car_model: editCarModel || null,
+        license_plate: editLicensePlate || null,
       });
       setEditing(false);
       toast({
@@ -156,8 +153,6 @@ const DriverProfile = () => {
     }
   };
 
-  // Removed Rides Logic (Moved to DriverHistory.tsx)
-
   if (loading) {
     return <ProfileSkeleton />;
   }
@@ -168,7 +163,6 @@ const DriverProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
       {/* Header */}
       <div className="bg-[#1A1A1A] pb-12 rounded-b-[3rem] shadow-2xl relative overflow-hidden">
         {/* Background Elements */}
@@ -347,6 +341,17 @@ const DriverProfile = () => {
               </div>
 
               <div className="space-y-1 text-right">
+                <label className="text-xs text-gray-500 pr-1">رقم الهاتف</label>
+                <Input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="bg-[#252525] border-transparent text-white text-right h-12 rounded-xl focus:border-[#84cc16]/50"
+                  placeholder="0X XX XX XX XX"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="space-y-1 text-right">
                 <label className="text-xs text-gray-500 pr-1">رقم اللوحة</label>
                 <Input
                   value={editLicensePlate}
@@ -408,10 +413,7 @@ const DriverProfile = () => {
           </div>
         )}
       </div>
-
-      {/* Tabs */}
-      {/* Removed Tabs (Moved to DriverHistory.tsx) */}
-    </div >
+    </div>
   );
 };
 
