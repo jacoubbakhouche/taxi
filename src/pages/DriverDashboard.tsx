@@ -746,7 +746,12 @@ const DriverDashboard = () => {
         description: "يرجى تقييم العميل",
       });
 
-      // Delay cleaning content to show rating
+      // KEY FIX: Clear current ride state IMMEDIATELY so the card vanishes
+      // We rely on 'showRating' to keep the rating dialog open
+      setCurrentRide(null);
+      setCustomerLocation(null);
+      setDestinationLocation(null);
+
       setShowRating(true);
 
     } catch (error) {
