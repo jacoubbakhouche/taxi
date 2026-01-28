@@ -103,38 +103,57 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
   const isLockedRef = useRef(true);
   // We track if we are currently "flying" or "panning" automatically
   const isAutoMovingRef = useRef(false);
+  const autoRecenterTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearAutoRecenterChange = () => {
+    if (autoRecenterTimerRef.current) {
+      clearTimeout(autoRecenterTimerRef.current);
+      autoRecenterTimerRef.current = null;
+    }
+  };
+
+  const startAutoRecenterTimer = () => {
+    clearAutoRecenterChange();
+    autoRecenterTimerRef.current = setTimeout(() => {
+      // Auto-recenter after 10 seconds of no interaction
+      if (!isLockedRef.current) {
+        handleRecenter();
+      }
+    }, 10000); // 10 seconds
+  };
 
   // Interaction handlers to UNLOCK the map
   useMapEvents({
     dragstart: () => {
-      // User started dragging
       isLockedRef.current = false;
       setIsLocked(false);
+      clearAutoRecenterChange();
     },
     zoomstart: () => {
-      // User started zooming (pinching/scroll)
       isLockedRef.current = false;
       setIsLocked(false);
+      clearAutoRecenterChange();
     },
-    // We catch "movestart" to detect valid user pans, 
-    // but dragstart is more specific to "user intent".
+    dragend: () => {
+      startAutoRecenterTimer();
+    },
+    zoomend: () => {
+      startAutoRecenterTimer();
+    }
   });
 
   // Watch for Center updates (GPS moving)
   useEffect(() => {
     if (isLockedRef.current && center) {
-      // Use panTo for smoother following without changing zoom
       isAutoMovingRef.current = true;
       map.panTo(center, { animate: true, duration: 1.0 });
-      // Reset auto flag after animation "theoretically" ends? 
-      // Actually panTo handles itself.
     }
   }, [center, map]);
 
   const handleRecenter = useCallback(() => {
     isLockedRef.current = true;
     setIsLocked(true);
-    // Explicitly re-center
+    clearAutoRecenterChange();
     map.flyTo(center, 16, { animate: true, duration: 1 });
   }, [center, map]);
 
