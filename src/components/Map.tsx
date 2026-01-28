@@ -122,6 +122,11 @@ function MapController({ center, recenterKey }: { center: [number, number], rece
     }, 10000); // 10 seconds
   };
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => clearAutoRecenterChange();
+  }, []);
+
   // Interaction handlers to UNLOCK the map
   useMapEvents({
     dragstart: () => {
