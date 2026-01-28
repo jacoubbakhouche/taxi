@@ -15,6 +15,7 @@ import { BiddingControls } from "@/components/BiddingControls";
 import { DriverOffersList } from "@/components/DriverOffersList";
 import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle, Settings } from "lucide-react";
 import { playSound } from "@/utils/audio";
+import { useTranslation } from "react-i18next";
 
 /**
  * CustomerDashboard - Rebuilt for stability
@@ -27,6 +28,7 @@ import { playSound } from "@/utils/audio";
  */
 
 const CustomerDashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // --- Core State ---
@@ -683,7 +685,7 @@ const CustomerDashboard = () => {
           </SheetTrigger>
           <SheetContent side="right" className="bg-[#1A1A1A] border-l border-white/10 text-white w-[300px] sm:w-[400px]">
             <SheetHeader className="mb-8 text-right">
-              <SheetTitle className="text-2xl font-bold text-white mb-2">القائمة</SheetTitle>
+              <SheetTitle className="text-2xl font-bold text-white mb-2">{t('common.menu')}</SheetTitle>
               <div className="h-1 w-20 bg-[#84cc16] rounded-full ml-auto"></div>
             </SheetHeader>
 
@@ -694,7 +696,7 @@ const CustomerDashboard = () => {
                 onClick={() => navigate("/customer/profile")}
               >
                 <UserCircle className="w-6 h-6" />
-                الملف الشخصي
+                {t('sidebar.profile')}
               </Button>
 
               <Button
@@ -703,7 +705,7 @@ const CustomerDashboard = () => {
                 onClick={() => navigate("/customer/history")}
               >
                 <History className="w-6 h-6" />
-                سجل الرحلات
+                {t('sidebar.history')}
               </Button>
 
               <div className="h-px bg-white/10 my-4"></div>
@@ -714,17 +716,14 @@ const CustomerDashboard = () => {
                 onClick={() => navigate("/settings")}
               >
                 <Settings className="w-6 h-6" />
-                الإعدادات
+                {t('sidebar.settings')}
               </Button>
 
-              <Button
-                variant="ghost"
-                className="justify-start gap-4 h-14 text-lg text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-6 h-6" />
-                تسجيل الخروج
-              </Button>
+              <div className="h-px bg-white/10 my-4"></div>
+
+              <div className="px-2 text-xs text-gray-500 font-medium font-mono text-center opacity-50">
+                {t('sidebar.version')} 1.0.0
+              </div>
             </div>
           </SheetContent>
         </Sheet>

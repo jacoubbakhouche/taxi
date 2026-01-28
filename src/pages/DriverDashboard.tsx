@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { playSound } from "@/utils/audio"; // Audio Utility import
 
 const DriverDashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   // Initialize to null, but we will render map anyway with a fallback center
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null);
@@ -1081,7 +1082,7 @@ const DriverDashboard = () => {
             </SheetTrigger>
             <SheetContent side="right" className="bg-[#1A1A1A] border-l border-white/10 text-white w-[300px] sm:w-[400px]">
               <SheetHeader className="mb-8 text-right">
-                <SheetTitle className="text-2xl font-bold text-white mb-2">القائمة</SheetTitle>
+                <SheetTitle className="text-2xl font-bold text-white mb-2">{t('common.menu')}</SheetTitle>
                 <div className="h-1 w-20 bg-[#84cc16] rounded-full ml-auto"></div>
               </SheetHeader>
 
@@ -1092,7 +1093,7 @@ const DriverDashboard = () => {
                   onClick={() => navigate("/driver/profile")}
                 >
                   <UserCircle className="w-6 h-6" />
-                  الملف الشخصي
+                  {t('sidebar.profile')}
                 </Button>
 
                 <Button
@@ -1101,7 +1102,7 @@ const DriverDashboard = () => {
                   onClick={() => navigate("/driver/financials")}
                 >
                   <CreditCard className="w-6 h-6" />
-                  الوضع المالي
+                  {t('sidebar.financials')}
                 </Button>
 
                 <Button
@@ -1110,7 +1111,7 @@ const DriverDashboard = () => {
                   onClick={() => navigate("/driver/history")}
                 >
                   <History className="w-6 h-6" />
-                  سجل الرحلات
+                  {t('sidebar.history')}
                 </Button>
 
                 <Button
@@ -1119,19 +1120,14 @@ const DriverDashboard = () => {
                   onClick={() => navigate("/settings")}
                 >
                   <Settings className="w-6 h-6" />
-                  الإعدادات
+                  {t('sidebar.settings')}
                 </Button>
 
                 <div className="h-px bg-white/10 my-4"></div>
 
-                <Button
-                  variant="ghost"
-                  className="justify-start gap-4 h-14 text-lg text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-6 h-6" />
-                  تسجيل الخروج
-                </Button>
+                <div className="px-2 text-xs text-gray-500 font-medium font-mono text-center opacity-50 pt-2">
+                  {t('sidebar.version')} 1.0.0
+                </div>
               </div>
             </SheetContent>
           </Sheet>

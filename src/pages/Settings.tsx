@@ -14,9 +14,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, LogOut, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { ArrowLeft, LogOut, Trash2, Settings as SettingsIcon, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -73,8 +74,17 @@ const Settings = () => {
         }
     };
 
+    const { t, i18n } = useTranslation();
+    const isRTL = i18n.language === 'ar';
+
+    const changeLanguage = (lng: string) => {
+        i18n.changeLanguage(lng);
+        // Put direction on the body/html if needed, or just rely on the parent div's dir attribute for this page
+        document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+    };
+
     return (
-        <div className="min-h-screen bg-[#111111] font-sans pb-10" dir="rtl">
+        <div className="min-h-screen bg-[#111111] font-sans pb-10" dir={isRTL ? "rtl" : "ltr"}>
             {/* Header */}
             <div className="bg-[#1A1A1A] p-6 shadow-xl rounded-b-[2rem] border-b border-white/5 mb-8">
                 <div className="flex items-center justify-between">
@@ -84,10 +94,10 @@ const Settings = () => {
                         onClick={() => navigate(-1)}
                         className="text-white hover:bg-white/10 rounded-full"
                     >
-                        <ArrowLeft className="w-6 h-6" />
+                        <ArrowLeft className={`w-6 h-6 ${isRTL ? "" : "rotate-180"}`} />
                     </Button>
                     <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                        الإعدادات <SettingsIcon className="w-6 h-6 text-[#84cc16]" />
+                        {t('settings.title')} <SettingsIcon className="w-6 h-6 text-[#84cc16]" />
                     </h1>
                 </div>
             </div>
@@ -95,8 +105,32 @@ const Settings = () => {
             <div className="px-6 space-y-6 max-w-md mx-auto">
 
                 <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 text-sm text-gray-400 leading-relaxed">
-                    هذه الصفحة تتيح لك التحكم في إعدادات الحساب الحساسة. يرجى الحذر عند استخدام خيار حذف الحساب.
+                    {t('settings.warning')}
                 </div>
+
+                {/* Language Selection */}
+                <Card className="bg-[#1A1A1A] border-white/5 p-4 rounded-xl space-y-4">
+                    <div className="flex items-center gap-2 text-white mb-2">
+                        <Globe className="w-5 h-5 text-[#84cc16]" />
+                        <span className="font-bold">{t('settings.language')}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button
+                            variant={i18n.language === 'en' ? "default" : "outline"}
+                            className={`h-12 border-white/10 ${i18n.language === 'en' ? "bg-[#84cc16] text-black hover:bg-[#72b013]" : "bg-transparent text-white hover:bg-white/5"}`}
+                            onClick={() => changeLanguage('en')}
+                        >
+                            English
+                        </Button>
+                        <Button
+                            variant={i18n.language === 'ar' ? "default" : "outline"}
+                            className={`h-12 border-white/10 ${i18n.language === 'ar' ? "bg-[#84cc16] text-black hover:bg-[#72b013]" : "bg-transparent text-white hover:bg-white/5"}`}
+                            onClick={() => changeLanguage('ar')}
+                        >
+                            العربية
+                        </Button>
+                    </div>
+                </Card>
 
                 <div className="space-y-4">
                     <Button
@@ -108,7 +142,7 @@ const Settings = () => {
                             <div className="bg-gray-800 p-2 rounded-lg group-hover:bg-gray-700 transition-colors">
                                 <LogOut className="w-5 h-5 text-gray-400" />
                             </div>
-                            <span className="font-bold text-lg">تسجيل الخروج</span>
+                            <span className="font-bold text-lg">{t('common.logout')}</span>
                         </div>
                     </Button>
 
@@ -122,25 +156,29 @@ const Settings = () => {
                                     <div className="bg-red-500/10 p-2 rounded-lg group-hover:bg-red-500/20 transition-colors">
                                         <Trash2 className="w-5 h-5" />
                                     </div>
-                                    <span className="font-bold text-lg">حذف حسابي</span>
+                                    <span className="font-bold text-lg">{t('settings.deleteAccount')}</span>
                                 </div>
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="bg-[#1A1A1A] border border-white/10 text-white">
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="text-right text-red-500">هل أنت متأكد تماماً؟</AlertDialogTitle>
-                                <AlertDialogDescription className="text-right text-gray-400">
-                                    سيتم حذف حسابك وجميع بياناتك (سجل الرحلات، التقييمات، المحفظة) نهائياً من قاعدة البيانات. لا يمكن التراجع عن هذا الإجراء.
+                                <AlertDialogTitle className={`text-red-500 ${isRTL ? "text-right" : "text-left"}`}>
+                                    {t('settings.confirmDeleteTitle')}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className={`text-gray-400 ${isRTL ? "text-right" : "text-left"}`}>
+                                    {t('settings.confirmDeleteDesc')}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-row-reverse gap-2">
-                                <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5">إلغاء</AlertDialogCancel>
+                            <AlertDialogFooter className={`flex gap-2 ${isRTL ? "flex-row-reverse" : "flex-row"}`}>
+                                <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5">
+                                    {t('common.cancel')}
+                                </AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={handleDeleteAccount}
                                     className="bg-red-600 hover:bg-red-700 text-white"
                                     disabled={loading}
                                 >
-                                    {loading ? "جاري الحذف..." : "نعم، احذف حسابي"}
+                                    {loading ? t('settings.deleting') : t('settings.deleteAction')}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>

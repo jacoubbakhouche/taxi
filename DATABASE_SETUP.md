@@ -21,12 +21,20 @@ $$;
 
 -- 2. Grant permission for logged-in users to use this function
 GRANT EXECUTE ON FUNCTION delete_own_account TO authenticated;
+
+-- 3. (Optional) Allow users to delete their public profile directly
+-- This is a fallback if the RPC is not used
+CREATE POLICY "Users can delete own profile" ON public.users 
+FOR DELETE USING (auth.uid() = id);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
 ```
 
 ## How to run:
 1. Go to your [Supabase Dashboard](https://supabase.com/dashboard).
 2. Select your project.
-3. Loock for the **SQL Editor** in the left sidebar.
+3. Look for the **SQL Editor** in the left sidebar.
 4. Paste the code above and click **Run**.
 
 Once this is done, the "Delete Account" button in the Settings page will work correctly.
