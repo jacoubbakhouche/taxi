@@ -1039,9 +1039,9 @@ const DriverDashboard = () => {
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
       {/* --- Professional Header (Same as Customer) --- */}
-      <header className="absolute top-0 left-0 right-0 z-[3000] p-4 flex justify-between items-start">
+      <header className="fixed top-0 left-0 right-0 z-[3000] p-4 flex justify-between items-start pointer-events-none">
         {/* Logo/Status Box */}
-        <div className="bg-card/90 backdrop-blur border border-border rounded-full p-2 pr-4 pl-2 flex items-center gap-3 shadow-lg">
+        <div className="bg-card/90 backdrop-blur border border-border rounded-full p-2 pr-4 pl-2 flex items-center gap-3 shadow-lg pointer-events-auto">
           <div className={cn(
             "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
             isOnline ? "bg-green-500" : "bg-red-500"
@@ -1057,8 +1057,7 @@ const DriverDashboard = () => {
         </div>
 
         {/* Actions */}
-        {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 pointer-events-auto">
           {/* Online Toggle (Kept outside for quick access) */}
           <Button
             size="icon"
