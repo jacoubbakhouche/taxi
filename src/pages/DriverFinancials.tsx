@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, CreditCard, AlertTriangle, Calendar, CheckCircle } from "lucide-react";
+import { ArrowLeft, CreditCard, AlertTriangle, Calendar, CheckCircle, Car, Star, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -12,6 +12,7 @@ const DriverFinancials = () => {
     const [loading, setLoading] = useState(true);
     const [driver, setDriver] = useState<any>(null);
     const [error, setError] = useState(false);
+    const [totalEarnings, setTotalEarnings] = useState(0);
 
     useEffect(() => {
         fetchDriverStatus();
@@ -35,6 +36,19 @@ const DriverFinancials = () => {
 
             if (error) throw error;
             setDriver(data);
+
+            // Fetch Rides for Earnings Calc
+            const { data: rides, error: ridesError } = await supabase
+                .from("rides")
+                .select("price, status")
+                .eq("driver_id", data.id)
+                .eq("status", "completed");
+
+            if (rides) {
+                const earnings = rides.reduce((sum, ride) => sum + (ride.price || 0), 0);
+                setTotalEarnings(earnings);
+            }
+
         } catch (error) {
             console.error(error);
             setError(true);
@@ -77,6 +91,7 @@ const DriverFinancials = () => {
     const now = new Date();
     const daysLeft = endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const isExpired = daysLeft <= 0;
+    const completedRides = driver.total_rides || 0;
 
     return (
         <div className="min-h-screen bg-[#111111] pb-8 relative font-sans" dir="rtl">
@@ -93,6 +108,33 @@ const DriverFinancials = () => {
             </div>
 
             <div className="px-6 space-y-6">
+
+                {/* Stats Grid - Moved from Profile */}
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                    <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A] border border-white/10 shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-1">
+                            <Car className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <p className="text-2xl font-bold text-white">{completedRides}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">رحلات</p>
+                    </div>
+
+                    <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A] border border-white/10 shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-[#84cc16]/10 flex items-center justify-center mb-1">
+                            <Star className="w-5 h-5 text-[#84cc16]" />
+                        </div>
+                        <p className="text-2xl font-bold text-white">{(driver.rating || 0).toFixed(1)}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">تقييم</p>
+                    </div>
+
+                    <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A] border border-white/10 shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-1">
+                            <DollarSign className="w-5 h-5 text-purple-500" />
+                        </div>
+                        <p className="text-lg font-bold text-white whitespace-nowrap">{totalEarnings > 1000 ? (totalEarnings / 1000).toFixed(1) + 'k' : totalEarnings}</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">مكتسبات</p>
+                    </div>
+                </div>
 
                 {/* Suspended Alert */}
                 {driver.is_suspended && (

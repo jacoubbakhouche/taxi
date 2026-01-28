@@ -47,7 +47,7 @@ const DriverProfile = () => {
   const [editCarModel, setEditCarModel] = useState("");
   const [editLicensePlate, setEditLicensePlate] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [totalEarnings, setTotalEarnings] = useState(0);
+
 
   useEffect(() => {
     loadProfile();
@@ -77,9 +77,6 @@ const DriverProfile = () => {
       setEditLicensePlate(user.license_plate || "");
       setEditPhone(user.phone || "");
 
-      // Load rides stats immediately
-      loadRides(user.id);
-
     } catch (error: any) {
       toast({
         title: "خطأ",
@@ -91,25 +88,7 @@ const DriverProfile = () => {
     }
   };
 
-  const loadRides = async (driverId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("rides")
-        .select("*")
-        .eq("driver_id", driverId)
-        .order("created_at", { ascending: false });
 
-      if (error) throw error;
-
-      // Calculate total earnings from completed rides
-      const earnings = (data || [])
-        .filter(ride => ride.status === "completed")
-        .reduce((sum, ride) => sum + (ride.price || 0), 0);
-      setTotalEarnings(earnings);
-    } catch (error: any) {
-      console.error("Error loading rides:", error);
-    }
-  };
 
   const handleSaveProfile = async () => {
     if (!profile) return;
@@ -158,8 +137,6 @@ const DriverProfile = () => {
   }
 
   if (!profile) return null;
-
-  const completedRides = profile.total_rides || 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -291,34 +268,8 @@ const DriverProfile = () => {
       {/* Main Content Area */}
       <div className="px-6 -mt-8 relative z-20 space-y-6">
 
-        {/* Stats Grid */}
-        {!editing && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-1">
-                <Car className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-2xl font-bold text-white">{completedRides}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Rides</p>
-            </div>
+        {/* Stats Grid Removed */}
 
-            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
-              <div className="w-10 h-10 rounded-full bg-[#84cc16]/10 flex items-center justify-center mb-1">
-                <Star className="w-5 h-5 text-[#84cc16]" />
-              </div>
-              <p className="text-2xl font-bold text-white">{profile.rating.toFixed(1)}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Rating</p>
-            </div>
-
-            <div className="glass-card p-4 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 bg-[#1A1A1A]/80 backdrop-blur border border-white/5 shadow-xl">
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-1">
-                <DollarSign className="w-5 h-5 text-purple-500" />
-              </div>
-              <p className="text-lg font-bold text-white whitespace-nowrap">{totalEarnings > 1000 ? (totalEarnings / 1000).toFixed(1) + 'k' : totalEarnings}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Earned</p>
-            </div>
-          </div>
-        )}
 
         {/* Edit Form or Info View */}
         {editing ? (

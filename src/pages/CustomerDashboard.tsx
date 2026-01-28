@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { BiddingControls } from "@/components/BiddingControls";
 import { DriverOffersList } from "@/components/DriverOffersList";
-import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle } from "lucide-react";
+import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle, Settings } from "lucide-react";
 import { playSound } from "@/utils/audio";
 
 /**
@@ -707,6 +707,15 @@ const CustomerDashboard = () => {
               </Button>
 
               <div className="h-px bg-white/10 my-4"></div>
+
+              <Button
+                variant="ghost"
+                className="justify-start gap-4 h-14 text-lg hover:bg-white/5 hover:text-[#84cc16] transition-colors"
+                onClick={() => navigate("/settings")}
+              >
+                <Settings className="w-6 h-6" />
+                الإعدادات
+              </Button>
 
               <Button
                 variant="ghost"

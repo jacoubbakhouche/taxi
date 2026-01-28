@@ -20,7 +20,7 @@ import DriverProfileView from "./pages/DriverProfileView";
 import LocationPermission from "./pages/LocationPermission";
 import NotFound from "./pages/NotFound";
 import DriverLayout from "./components/DriverLayout";
-import { useState } from "react";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +37,8 @@ const App = () => {
             <Route path="/customer/auth" element={<CustomerAuth />} />
             <Route path="/driver/onboarding" element={<DriverOnboarding />} />
             <Route path="/driver/auth" element={<DriverAuth />} />
+
+            <Route path="/settings" element={<Settings />} />
 
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
