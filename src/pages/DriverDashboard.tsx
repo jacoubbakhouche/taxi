@@ -13,6 +13,7 @@ import RatingDialog from "@/components/RatingDialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Car, Navigation, LogOut, Power, CheckCircle, Clock, MapPin, User, Loader2, Phone, ShieldCheck, Menu, History, UserCircle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playSound } from "@/utils/audio"; // Audio Utility import
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
@@ -41,6 +42,21 @@ const DriverDashboard = () => {
 
   // ... (inside checkAuth) update this state
 
+  // SOUND EFFECT: Ring when Pending Ride exists
+  useEffect(() => {
+    let audio: HTMLAudioElement | null = null;
+    if (pendingRide && !currentRide) {
+      console.log("🔔 Ringing sound started...");
+      audio = playSound('ring');
+    }
+    return () => {
+      if (audio) {
+        console.log("🔕 Ringing sound stopped.");
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    }
+  }, [pendingRide, currentRide]);
 
   useEffect(() => {
     checkAuth();

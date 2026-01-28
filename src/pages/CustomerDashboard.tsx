@@ -14,6 +14,7 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { BiddingControls } from "@/components/BiddingControls";
 import { DriverOffersList } from "@/components/DriverOffersList";
 import { MapPin, Navigation, LogOut, Search, User, ChevronDown, ChevronUp, Loader2, Menu, History, UserCircle } from "lucide-react";
+import { playSound } from "@/utils/audio";
 
 /**
  * CustomerDashboard - Rebuilt for stability
@@ -232,6 +233,7 @@ const CustomerDashboard = () => {
             setRideStatus('accepted');
             if (updatedRide.final_price) setPrice(updatedRide.final_price); // Update price from DB
             if (updatedRide.driver_id) fetchDriverDetails(updatedRide.driver_id);
+            playSound('notification');
             toast({ title: "تم قبول الطلب! 🚕", description: "السائق قادم إليك" });
           }
           else if (updatedRide.status === 'in_progress') {

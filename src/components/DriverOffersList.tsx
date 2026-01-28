@@ -7,6 +7,7 @@ import { User, Star, Check, X, Car, Plus, Minus, Send, Zap, Clock, MapPin, Navig
 import { toast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { playSound } from "@/utils/audio";
 
 interface DriverOffer {
     id: string;
@@ -223,6 +224,7 @@ export const DriverOffersList = ({
             const enriched = { ...offer, driver: driver || {} };
             setOffers(prev => {
                 if (prev.find(o => o.id === offerId)) return prev;
+                playSound('offer'); // Play sound on new offer
                 return [...prev, enriched].sort((a, b) => a.amount - b.amount);
             });
             setIsTimeout(false); // Reset timeout

@@ -32,14 +32,32 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      // Import dynamically or assume global loaded to prevent circular deps?
+      // Actually direct import is fine.
+      try {
+        const audio = new Audio('/sounds/click.mp3');
+        audio.volume = 0.2;
+        audio.play().catch(() => { });
+      } catch (e) { }
+
+      if (onClick) onClick(e);
+    };
+
+    return <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      ref={ref}
+      onClick={handleClick}
+      {...props}
+    />;
   },
 );
 Button.displayName = "Button";
