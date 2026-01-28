@@ -98,17 +98,8 @@ const CustomerDashboard = () => {
           setShowCompleteProfile(true);
         }
 
-        // 3. Get Location (Revised: Watch Position for accuracy)
-        if (navigator.geolocation) {
-          // Use watchPosition to get continuous updates and ensure freshness
-          // storing the ID in a ref would be better but for simplified initialization:
-          navigator.geolocation.getCurrentPosition(
-            (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-            (err) => console.error("Location error:", err),
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Force fresh
-          );
-          // Removed duplicate watcher init here, handled in active effect below
-        }
+        // 3. Location is now handled by the dedicated useEffect with fallback below
+
 
         // 4. Restore Active Ride (CRITICAL FIX)
         const { data: activeRide, error: rideError } = await supabase
@@ -177,30 +168,40 @@ const CustomerDashboard = () => {
     initialize();
   }, []); // Run ONCE on mount
 
-  // NEW: Dedicated Location Watcher
+  // NEW: Dedicated Location Watcher with Fallback Strategy
   useEffect(() => {
     let watchId: number;
 
-    if (navigator.geolocation) {
-      // Force initial fresh get
+    const startWatching = (highAccuracy = true) => {
+      if (!navigator.geolocation) return;
+
+      // 1. Initial Quick Fix
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-        (err) => console.error("Initial location error:", err),
-        { enableHighAccuracy: true, maximumAge: 0 }
+        (err) => {
+          console.warn(`Initial location error (HighAccuracy: ${highAccuracy}):`, err);
+          if (highAccuracy) {
+            // Fallback to low accuracy
+            console.log("Falling back to low accuracy...");
+            startWatching(false);
+          }
+        },
+        { enableHighAccuracy: highAccuracy, maximumAge: highAccuracy ? 0 : 60000, timeout: 10000 }
       );
 
-      // Continuous watch
+      // 2. Continuous Watch
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          // Only update if no active ride (or if active ride is 'searching'/'idle')
-          // If ride is accepted, we might want to lock pickup? 
-          // Actually, for userLocation marker, it should ALWAYS be current.
           setUserLocation([pos.coords.latitude, pos.coords.longitude]);
         },
         (err) => console.error("Watch error:", err),
-        { enableHighAccuracy: true, maximumAge: 0 }
+        { enableHighAccuracy: highAccuracy, maximumAge: 0, timeout: 20000 }
       );
-    }
+    };
+
+    startWatching(true);
 
     return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);
