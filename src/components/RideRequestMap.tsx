@@ -141,10 +141,12 @@ const RideRequestMap = ({ driverLocation, pickupLocation, dropoffLocation }: Rid
                     className="dark-map-tiles"
                 />
 
-                <BoundsFitter
+                {/* REMOVED AGGRESSIVE BOUNDS FITTER to prevent fighting with auto-follow */}
+                {/* We rely on MapRecenterControl for active tracking now */}
+
+                <MapRecenterControl
                     driverLocation={driverLocation}
-                    pickupLocation={pickupLocation}
-                    dropoffLocation={dropoffLocation}
+                    pickupLocation={pickupLocation} // Pass pickup to allow initial bounds fit
                 />
 
                 {/* Path A: Driver -> Pickup (Green Dashed) */}
@@ -153,9 +155,11 @@ const RideRequestMap = ({ driverLocation, pickupLocation, dropoffLocation }: Rid
                         positions={pathToPickup}
                         pathOptions={{
                             color: '#22c55e', // Green-500
-                            weight: 4,
+                            weight: 5,
                             dashArray: '10, 10',
-                            opacity: 0.8
+                            opacity: 0.9,
+                            lineCap: 'round',
+                            lineJoin: 'round'
                         }}
                     />
                 )}
@@ -166,28 +170,30 @@ const RideRequestMap = ({ driverLocation, pickupLocation, dropoffLocation }: Rid
                         positions={pathToDropoff}
                         pathOptions={{
                             color: '#3b82f6', // Blue-500
-                            weight: 5,
-                            opacity: 1
+                            weight: 6,
+                            opacity: 1,
+                            lineCap: 'round',
+                            lineJoin: 'round'
                         }}
                     />
                 )}
 
                 {/* Markers */}
                 {driverLocation && (
-                    <Marker position={driverLocation} icon={carIcon}>
-                        <Popup>You (Driver)</Popup>
+                    <Marker position={driverLocation} icon={carIcon} zIndexOffset={100}>
+                        {/* No Popup for driver to keep view clean, or make it optional */}
                     </Marker>
                 )}
 
                 {pickupLocation && (
                     <Marker position={pickupLocation} icon={pickupIcon}>
-                        <Popup>Pickup</Popup>
+                        {/* Pickup */}
                     </Marker>
                 )}
 
                 {dropoffLocation && (
                     <Marker position={dropoffLocation} icon={dropoffIcon}>
-                        <Popup>Destination</Popup>
+                        {/* Destination */}
                     </Marker>
                 )}
 
@@ -195,5 +201,70 @@ const RideRequestMap = ({ driverLocation, pickupLocation, dropoffLocation }: Rid
         </div>
     );
 };
+
+// Component: Handles Camera Logic (Follow, Drag, Fit)
+function MapRecenterControl({ driverLocation, pickupLocation }: { driverLocation: [number, number] | null, pickupLocation: [number, number] | null }) {
+    const map = useMap();
+    const [mode, setMode] = useState<'following' | 'manual' | 'fitting'>('fitting');
+    const [hasInitialFit, setHasInitialFit] = useState(false);
+
+    // 1. Initial Bounds Fit (Once)
+    useEffect(() => {
+        if (!hasInitialFit && driverLocation && pickupLocation) {
+            const bounds = L.latLngBounds([driverLocation, pickupLocation]);
+            if (bounds.isValid()) {
+                map.fitBounds(bounds.pad(0.2), { animate: false }); // Instant fit first time
+                setHasInitialFit(true);
+                // After a brief delay to let the user see the route, switch to following the driver
+                setTimeout(() => setMode('following'), 2000);
+            }
+        } else if (!hasInitialFit && driverLocation) {
+            // Fallback if no pickup yet
+            map.setView(driverLocation, 15);
+            setHasInitialFit(true);
+            setMode('following');
+        }
+    }, [driverLocation, pickupLocation, hasInitialFit, map]);
+
+    // 2. Auto-follow Logic (Smooth Pan)
+    useEffect(() => {
+        if (mode === 'following' && driverLocation) {
+            map.flyTo(driverLocation, 17, {
+                animate: true,
+                duration: 1.5, // Smooth float
+                easeLinearity: 0.25
+            });
+        }
+    }, [driverLocation, mode, map]);
+
+    // 3. Detect Manual Drag to break follow mode
+    useEffect(() => {
+        const onDragStart = () => {
+            if (mode === 'following') setMode('manual');
+        };
+        map.on('dragstart', onDragStart);
+        return () => { map.off('dragstart', onDragStart); };
+    }, [map, mode]);
+
+    const handleRecenter = (e: any) => {
+        e.stopPropagation();
+        if (driverLocation) {
+            setMode('following');
+            map.flyTo(driverLocation, 17, { animate: true, duration: 1 });
+        }
+    };
+
+    return (
+        <div className="leaflet-bottom leaflet-right" style={{ bottom: '8rem', right: '1rem', pointerEvents: 'auto', zIndex: 1000 }}>
+            <button
+                onClick={handleRecenter}
+                className={`bg-white p-3 rounded-full shadow-xl border border-gray-200 transition-all active:scale-95 ${mode === 'following' ? 'text-[#84cc16] ring-2 ring-[#84cc16]/20' : 'text-gray-500 hover:text-black'}`}
+                title="ركز علي (Recenter)"
+            >
+                <Navigation className={`w-6 h-6 ${mode === 'following' ? 'fill-current' : ''}`} />
+            </button>
+        </div>
+    );
+}
 
 export default RideRequestMap;

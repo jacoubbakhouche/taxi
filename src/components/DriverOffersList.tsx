@@ -35,77 +35,70 @@ interface DriverOffersListProps {
 
 // --- Offer Card Component ---
 const OfferCard = ({ offer, onAccept, onReject }: { offer: DriverOffer, onAccept: () => void, onReject: () => void }) => {
-    const [progress, setProgress] = useState(100);
-    const TIMER_MS = 15000; // 15 seconds expiry
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev <= 0) {
-                    clearInterval(interval);
-                    onReject();
-                    return 0;
-                }
-                return prev - (100 / (TIMER_MS / 100));
-            });
-        }, 100);
-        return () => clearInterval(interval);
-    }, []);
+    // Note: Progress logic removed from UI consideration based on static image reference, but keeping logic if needed later
+    // For now, clean static card as requested.
 
     return (
-        <Card className="bg-[#1A1A1A] border-white/10 overflow-hidden mb-3 animate-in slide-in-from-bottom-2">
-            <div className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                    <div className="flex flex-col">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-bold text-white">{Math.round(offer.amount)} <span className="text-sm font-normal text-gray-400">دج</span></span>
+        <Card className="bg-[#1A1A1A] border-white/5 rounded-[2rem] overflow-hidden mb-3 animate-in slide-in-from-bottom-2 shadow-lg">
+            <div className="p-5">
+                {/* Top Section: Info Row */}
+                <div className="flex justify-between items-start mb-5">
+
+                    {/* LEFT: Price & Time (As per image) */}
+                    <div className="text-left">
+                        <div className="flex items-baseline gap-1" dir="ltr">
+                            <span className="text-3xl font-bold text-white tracking-tighter">{Math.round(offer.amount)}</span>
+                            <span className="text-lg font-bold text-gray-300">دج</span>
                         </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-sm mt-1">
-                            <Clock className="w-3 h-3" />
-                            <span>6 دقيقة</span>
+                        <div className="flex items-center gap-1.5 text-gray-400 mt-1 justify-end" dir="ltr">
+                            <span className="font-bold text-lg text-gray-400">6</span>
+                            <span className="text-sm">دقيقة</span>
                         </div>
                     </div>
-                    {offer.driver.rating > 4.8 ? (
-                        <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">سائق بلاتيني 💎</Badge>
-                    ) : (
-                        <Badge className="bg-[#84cc16]/10 text-[#84cc16] border-[#84cc16]/20">أجرة رحلتك 👍</Badge>
-                    )}
+
+                    {/* RIGHT: Driver Details */}
+                    <div className="flex gap-3 text-right">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-white font-bold text-lg">{offer.driver.full_name}</span>
+                                <span className="text-white font-bold text-sm">★ {offer.driver.rating.toFixed(1)}</span>
+                            </div>
+                            <div className="text-gray-400 text-sm mb-1">{offer.driver.car_model || "سيارة"}</div>
+                            {offer.driver.rating > 4.8 ? (
+                                <span className="text-[#a855f7] text-xs font-bold bg-[#a855f7]/10 px-2 py-0.5 rounded-md border border-[#a855f7]/20">
+                                    سائق بلاتيني
+                                </span>
+                            ) : (
+                                <span className="text-[#84cc16] text-xs font-bold bg-[#84cc16]/10 px-2 py-0.5 rounded-md border border-[#84cc16]/20">
+                                    أجرة رحلتك
+                                </span>
+                            )}
+                        </div>
+                        <div className="relative shrink-0">
+                            <Avatar className="w-14 h-14 border-2 border-white/10">
+                                <AvatarImage src={offer.driver.profile_image || undefined} className="object-cover" />
+                                <AvatarFallback>{offer.driver.full_name[0]}</AvatarFallback>
+                            </Avatar>
+                            {/* Blue Badge Verify Icon (Mock) */}
+                            <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-0.5 border-2 border-[#1A1A1A]">
+                                <Check className="w-3 h-3" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3 mb-4 bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div className="relative">
-                        <Avatar className="w-12 h-12 border-2 border-[#84cc16]/20">
-                            <AvatarImage src={offer.driver.profile_image || undefined} />
-                            <AvatarFallback>{offer.driver.full_name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center shadow-lg border border-[#1A1A1A]">
-                            <span>★ {offer.driver.rating.toFixed(1)}</span>
-                        </div>
-                    </div>
-
-                    <div className="flex-1">
-                        <h4 className="font-bold text-white text-base leading-tight">{offer.driver.full_name}</h4>
-                        <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
-                            <span>{offer.driver.car_model || "سيارة"}</span>
-                            <span>•</span>
-                            <span>{offer.driver.total_rides} رحلة</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex gap-3 h-14">
-                    <div
-                        className="relative flex-1 rounded-xl overflow-hidden cursor-pointer group active:scale-95 transition-transform"
+                {/* Bottom Section: Actions */}
+                <div className="flex gap-3">
+                    <Button
+                        className="flex-[2] h-14 bg-[#84cc16] hover:bg-[#65a30d] text-black font-bold text-xl rounded-xl shadow-[0_4px_0_#5a8a12] active:shadow-none active:translate-y-1 transition-all"
                         onClick={onAccept}
                     >
-                        <div className="absolute inset-0 bg-[#3f6212]"></div>
-                        <div className="absolute inset-0 bg-[#84cc16] transition-all duration-100 ease-linear" style={{ width: `${progress}%` }}></div>
-                        <div className="absolute inset-0 flex items-center justify-center z-10 font-bold text-black text-xl">قبول</div>
-                    </div>
+                        قبول
+                    </Button>
 
                     <Button
-                        variant="outline"
-                        className="h-full w-24 border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 text-gray-400 font-bold text-lg rounded-xl"
+                        variant="ghost"
+                        className="flex-1 h-14 bg-[#333] hover:bg-[#444] text-white/90 font-bold text-lg rounded-xl border border-white/5"
                         onClick={onReject}
                     >
                         رفض
